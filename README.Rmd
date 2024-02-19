@@ -1,0 +1,51 @@
+---
+title: "ADDRESS"
+subtitle: "adit drainage solute source control"
+author: "Anita Alexandra Sanchez, Sean Adam"
+date: "`r Sys.Date()`"
+lang: "en-uk"
+
+output: 
+  github_document:
+    toc: TRUE
+    toc_depth: 2
+    number_sections: FALSE
+     #  toc_float: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# ADDRESS data exchange and online repository
+
+This repository serves as a platform for data exchange and its collaborative examination for the ADDRESS project.
+
+## GENERAL UPLOAD RULES / GUIDELINES
+
+Please do not directly upload to /main. Generally stable additions and clean data can be added to /work_in_progress. Unstable scripts / messy data should be commited to seperate (new) branch first to avoid contamination of main repository. Folder structure:
+
+-   R_main\
+    Contails all scripts. Clean / working scripts stored directly.
+
+    -   temp\
+        Working output directory. Plots, model outputs etc. should be saved here initially.
+
+    -   other folders\
+        For saving / dumping uncleaned scripts.
+
+-   models\
+    Clean, chekced and evaluated model outputs.
+
+-   data\
+    Raw data and compiled datasets
+
+    -   raw\
+        Store raw data from the lab or the spectrolyzers here.
+
+    -   processed\
+        Consolidated datasets and other data products.
+
+## MORE INFORMATION
+
+...to be added in future
