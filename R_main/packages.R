@@ -1,4 +1,5 @@
 # automatically installes and loads useful packages.
+# some packages might have some issues with dependancies / R versions / OS
 
 if(!require(Rtools)){
   install.packages("Rtools")
