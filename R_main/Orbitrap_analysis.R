@@ -5,49 +5,32 @@ library(ggpubr)
 
 
 #formula attribution for A12TH from icbm
-setwd("~/Desktop/orbit trap RZ/Processed_data")
+#setwd("~/Desktop/orbit trap RZ/Processed_data")
 
-A12_TH_orbitrap <- read.csv("Formula_attribution_A12TH_Jan2024.csv")
+A12_TH_orbitrap <- read.csv("~/GitHub/ADDRESS-adit_drainage_solute_source_control/data/Formula_attribution_A12TH_Feb2024.csv")
 
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample1_A12.20_1.csv"] <- "A12_TH1_20"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample2_A12.21_1.csv"] <- "A12_TH1_21"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample3_A12.22_1.csv"] <- "A12_TH1_22"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample4_A12.24_1.csv"] <- "A12_TH1_24"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample5_A12.TH.32_1.csv"] <- "A12_TH1_32"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample6_A12.TH.35_1.csv"] <- "A12_TH1_35"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample7_A12.TH1.36.csv"] <- "A12_TH1_36"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample8_A12.Top33_1.csv"] <- "A12_TH1_33"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample9_A12.03_1.csv"] <- "A12_03"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample10_A12.04_1.csv"] <- "A12_04"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample11_A12.05_1.csv"] <- "A12_05"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample12_A12.06_1.csv"] <- "A12_06"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample13_A12.07_1.csv"] <- "A12_07"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample14_A12.09_1.csv"] <- "A12_09"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample15_A12.11_1.csv"] <- "A12_11"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample16_A12.12_1.csv"] <- "A12_12"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample17_A12.15_1.csv"] <- "A12_15"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample18_A12.16_1.csv"] <- "A12_16"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample19_A12.17_1.csv"] <- "A12_17"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample20_A12.18_1.csv"] <- "A12_18"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample21_A12.TH1.23_1.csv"] <- "A12_TH1_23"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample22_A12.TH1.25_1.csv"] <- "A12_TH1_25"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample23_A12.TH1.26_1.csv"] <- "A12_TH1_26"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample24_A12.TH1.27_1.csv"] <- "A12_TH1_27"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample25_A12.TH1.28_1.csv"] <- "A12_TH1_28"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample26_A12.TH1.29_1.csv"] <- "A12_TH1_29"
-names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == "Sample27_A12.TH1.31_1.csv"] <- "A12_TH1_31"
+# fixing names: all sample Names have to be named Sample_NAME_1.csv; NAME must not contain "_"
+names(A12_TH_orbitrap)[ which(str_detect(names(A12_TH_orbitrap),"Sample")&
+                                !str_detect(names(A12_TH_orbitrap),"_1.csv"))]<-
+  str_replace(names(A12_TH_orbitrap)[ which(str_detect(names(A12_TH_orbitrap),"Sample")&
+                                  !str_detect(names(A12_TH_orbitrap),"_1.csv"))],
+              ".csv","_1.csv")
 
-# Find all columns that start with 'A12'
-sample_cols <- grep("^A12", names(A12_TH_orbitrap), value = TRUE)
+# renaming (pulling sample "NAME" from original "Sample_NAME_1.csv")
+names(A12_TH_orbitrap)[ which(str_detect(names(A12_TH_orbitrap),"Sample"))]<-
+  strsplit(names(A12_TH_orbitrap)[which(str_detect(names(A12_TH_orbitrap),"Sample"))],"_")%>%
+  map(2)%>%unlist
+  
+A12_TH_orbitrap%>%pivot_longer(
+  # Find all columns that start with 'A12'
+  cols=names(A12_TH_orbitrap)[which(str_detect(names(A12_TH_orbitrap),"A12."))],
+  names_to = "Sample_ID",
+  values_to = "Intensity"
+)->tmp
 
-# Initialize a list to store each modified dataframe
-modified_dataframes <- list()
 
-# Loop through each 'Sample..' column
-for(col_name in sample_cols) {
-  # Rename the 'Sample..' column to 'Intensity' and create 'Sample_ID'
-  names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == col_name] <- 'Intensity'
-  A12_TH_orbitrap$Sample_ID <- col_name
+
+
   
   # Select the relevant columns
   data_subset <- A12_TH_orbitrap[c('Sample_ID','id', 'mz','diff','reference', 'formula', 'H.C', 'O.C','C','H','O','N','S','P','AI', 'AI.mod', 
