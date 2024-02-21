@@ -131,18 +131,56 @@ Auto_spc<-inner_join(Auto,spc_data_clean,by="date")
         
         # saving output to /R_main/temp/ as rds. Named cubist-auto_#spc_set#-#trans#-#variable#
         saveRDS(out,paste0("~/Documents/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/temp/cubist-auto_",set,"-",trans,"-",i))
-        cat("\n\n finished ",set,"-",trans,"-",i,"\n\n")
+        cat("\n\n finished ",set,"-",trans,"-",i,"\n",out$documentation$test_eval_finalModel,"\n")
       }
       
     }
     
   }
 }
- 
 
-
-
-
+# aggregating evaluation
+plotlist<-list()
+cubist_model_eval_table<-c()
+for (i in list.files("~/Documents/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/temp/",full.names = T)){
+  model<-read_rds(i)
+  model_name<-basename(i)
+  
+  if (model_name%>%str_detect("spc-")){
+    if(model$documentation$trans=="none"){
+      test_ObsPred<-data.frame(pred=predict(model,model$testingData$spc),obs=model$testingData[[1]])
+    }else if (model$documentation$trans=="log1p"){
+      test_ObsPred<-data.frame(pred=exp(predict(model,model$testingData$spc))-1,obs=exp(model$testingData[[1]])-1)
+    }
+    set<-"spc"
+  }else if (model_name%>%str_detect("spc_sg11-")){
+    if(model$documentation$trans=="none"){
+      test_ObsPred<-data.frame(pred=predict(model,model$testingData$spc_sg11),obs=model$testingData[[1]])
+    }else if (model$documentation$tr=="log1p"){
+      test_ObsPred<-data.frame(pred=exp(predict(model,model$testingData$spc_sg11))-1,obs=exp(model$testingData[[1]])-1)
+    }
+    set<-"spc_sg11"
+  }else if (model_name%>%str_detect("spc_sg11_snv-")){
+    if(model$documentation$trans=="none"){
+      test_ObsPred<-data.frame(pred=predict(model,model$testingData$spc_sg11_snv),obs=model$testingData[[1]])
+    }else if (model$documentation$trans=="log1p"){
+      test_ObsPred<-data.frame(pred=exp(predict(model,model$testingData$spc_sg11_snv))-1,obs=exp(model$testingData[[1]])-1)
+    }
+    set<-"spc_sg11_snv"
+  }
+  
+  ggplot(test_ObsPred,aes(x=obs,y=pred))+
+    geom_point()+
+    geom_abline(intercept=0,slope=1,linetype="dotted")+
+    ggtitle(basename(i))+
+    theme_pubr()->plotlist[[basename(i)]]
+  
+  cubist_model_eval_table<-bind_rows(cubist_model_eval_table,
+                                     data.frame(set=set,
+                                                trans=model$documentation$trans,
+                                                variable=basename(i)%>%strsplit("-")%>%last%>%last,
+                                                data.frame(evaluate_model_adjusted(test_ObsPred,obs="obs",pred="pred"))))
+}
 
 
 
