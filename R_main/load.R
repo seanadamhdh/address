@@ -71,78 +71,74 @@ Auto_spc<-inner_join(Auto,spc_data_clean,by="date")
 
 ######################################
 # Calibration with Auto Sets ####
-
-#select spc set (when loop inactive)
-set<-"spc_sg11_snv"
-
-# Variable selection for model fitting
-variables<-c(
-  "doc_mgL",
-  "Fe_mgL"
-)
-# Cubist prarams
-trainGrid<-expand.grid(committees=c(1,2,5,10,20,50),
-                       neighbors=c(0:9))
-
-fitControl <- trainControl(
-  ## 10-fold CV
-  method = "cv",
-  number = 10,
-  ## print progress
-  verboseIter = TRUE)
-
-# initialize loop
-for (set in c("spc","spc_sg11","spc_sg11_snv")){
-  for (i in variables){
-    for (trans in c("none","log1p")){
-      
-      tmp<-na.omit(Auto_spc[,c(i,set)])
-      
-      if(trans=="log1p"){ 
-        tmp[[i]]<-log(tmp[[i]]+1)
-      }
-      
-      # 75 % train, 25 % test, based on variable
-      inTrain<-createDataPartition(tmp[[i]],p = .75)[[1]]
-      train<-tmp[inTrain,]
-      
-      test<-tmp[-inTrain,]
-      
-      
-      out<-train(
-        x=train[[set]],
-        y=train[[i]],
-        method="cubist",
-        tuneGrid=trainGrid,
-        trControl=fitControl
-      )
-      # appending test-set and metadata
-      out$testingData<-test
-      out$documentation<-list(
-        variable=i,
-        trans=trans,
-        n_train=nrow(train),
-        n_test=nrow(test),
-        test_eval_finalModel=
-          evaluate_model_adjusted(data.frame(obs=test[[i]],pred=predict(out$finalModel,test[[set]])),obs="obs",pred="pred")
+{
+  #select spc set (when loop inactive)
+  set<-"spc_sg11_snv"
+  
+  # Variable selection for model fitting
+  variables<-names(Auto)[-c(1:4,7,10)]
+  
+  # Cubist prarams
+  trainGrid<-expand.grid(committees=c(1,2,5,10,20,50),
+                         neighbors=c(0:9))
+  
+  fitControl <- trainControl(
+    ## 10-fold CV
+    method = "cv",
+    number = 10,
+    ## print progress
+    verboseIter = TRUE)
+  
+  # initialize loop
+  for (set in c("spc","spc_sg11","spc_sg11_snv")){
+    for (i in variables){
+      for (trans in c("none","log1p")){
+        cat("\n\n\n\n started ",set,"-",trans,"-",i,"\n\n")
+        tmp<-na.omit(Auto_spc[,c(i,set)])
+        
+        if(trans=="log1p"){ 
+          tmp[[i]]<-log(tmp[[i]]+1)
+        }
+        
+        # 75 % train, 25 % test, based on variable
+        inTrain<-createDataPartition(tmp[[i]],p = .75)[[1]]
+        train<-tmp[inTrain,]
+        
+        test<-tmp[-inTrain,]
+        
+        
+        out<-train(
+          x=train[[set]],
+          y=train[[i]],
+          method="cubist",
+          tuneGrid=trainGrid,
+          trControl=fitControl
+        )
+        # appending test-set and metadata
+        out$testingData<-test
+        out$documentation<-list(
+          variable=i,
+          trans=trans,
+          n_train=nrow(train),
+          n_test=nrow(test),
+          test_eval_finalModel=
+            evaluate_model_adjusted(data.frame(obs=test[[i]],pred=predict(out$finalModel,test[[set]])),obs="obs",pred="pred")
           #case_when(trans=="none"~evaluate_model_adjusted(data.frame(obs=test[[i]],pred=predict(out$finalModel,test[[set]])),obs="obs",pred="pred"),
           #          trans=="log1p"~evaluate_model_adjusted(data.frame(obs=exp(test[[i]])-1,pred=exp(predict(out$finalModel,test[[set]]))-1),obs="obs",pred="pred")
           #),
-        #note="test_eval was carried out with de-logged predictions"
-      )
+          #note="test_eval was carried out with de-logged predictions"
+        )
+        
+        # saving output to /R_main/temp/ as rds. Named cubist-auto_#spc_set#-#trans#-#variable#
+        saveRDS(out,paste0("~/Documents/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/temp/cubist-auto_",set,"-",trans,"-",i))
+        cat("\n\n finished ",set,"-",trans,"-",i,"\n\n")
+      }
       
-      
-      
-      
-      saveRDS(out,paste0("~/Documents/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/temp/cubist-auto_",set,"-",trans,"-",i))
-      break()
     }
     
   }
-  
 }
-
-
+ 
 
 
 
