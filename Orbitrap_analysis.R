@@ -5,9 +5,9 @@ library(ggpubr)
 
 
 #formula attribution for A12TH from icbm
-setwd("~/Desktop/orbit trap RZ/Processed_data")
+#setwd("~/Desktop/orbit trap RZ/Processed_data")
 
-A12_TH_orbitrap <- read.csv("NewA12TH_Feb2024.csv")
+A12_TH_orbitrap <- read.csv("~/Documents/GitHub/ADDRESS-adit_drainage_solute_source_control/data/Formula_attribution_A12TH_Feb2024.csv")
 
 # fixing names: all sample Names have to be named Sample_NAME_1.csv; NAME must not contain "_"
 names(A12_TH_orbitrap)[ which(str_detect(names(A12_TH_orbitrap),"Sample")&
@@ -26,17 +26,25 @@ A12_TH_orbitrap%>%pivot_longer(
   cols=names(A12_TH_orbitrap)[which(str_detect(names(A12_TH_orbitrap),"A12."))],
   names_to = "Sample_ID",
   values_to = "Intensity"
-)->tmp
+)->A12_TH_orbitrap_long
 
   
 
 # Selecting the subset of columns
-data_subset <- tmp[c('Sample_ID', 'id', 'mz', 'diff', 'reference', 'formula', 'H.C', 'O.C', 'C', 'H', 'O', 'N', 'S', 'P', 'AI', 'AI.mod', 
+A12_TH_orbitrap_subset <- A12_TH_orbitrap_long[c('Sample_ID', 'id', 'mz', 'diff', 'reference', 'formula', 'H.C', 'O.C', 'C', 'H', 'O', 'N', 'S', 'P', 'AI', 'AI.mod', 
                      'DBE', 'Aromatic', 'Highly.unsaturated', 'Unsaturated', 'Saturated', 'Intensity')]
 
+
 # Calculate relative intensity
-total_intensity <- sum(data_subset$Intensity, na.rm = TRUE)
-data_subset$relative_intensity <- (data_subset$Intensity / total_intensity)
+# grouped sums
+A12_TH_orbitrap_subset%>%group_by(Sample_ID)%>%
+  summarise(Intensity_sums=sum(Intensity,na.rm = T))->Intensity_sums
+
+# joining by Sample_Id
+left_join(A12_TH_orbitrap_subset,Intensity_sums,by="Sample_ID")%>%
+  mutate(relative_Intensity=Intensity/Intensity_sums)->data_subset # rename to fit your workflow
+ 
+
 
 # Calculate NOSC for each row
 data_subset$NOSC <- 4 - ((4 * data_subset$C + data_subset$H - 3 * data_subset$N - 2 * data_subset$O) / data_subset$C)
