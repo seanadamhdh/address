@@ -36,7 +36,7 @@ cat(
 )
 
 ################################
-# IMPLEMENT SOME PREPROCESSING #
+# IMPLEMENTED SOME PREPROCESSING #
 ################################
 
 # smoothing
@@ -116,9 +116,11 @@ Auto_spc<-inner_join(Auto,spc_data_clean,by="date")
         )
         # appending test-set and metadata
         out$testingData<-test
+        out$partition<-inTrain
         out$documentation<-list(
           variable=i,
           trans=trans,
+          set=set,
           n_train=nrow(train),
           n_test=nrow(test),
           test_eval_finalModel=
@@ -131,7 +133,8 @@ Auto_spc<-inner_join(Auto,spc_data_clean,by="date")
         
         # saving output to /R_main/temp/ as rds. Named cubist-auto_#spc_set#-#trans#-#variable#
         saveRDS(out,paste0("~/Documents/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/temp/cubist-auto_",set,"-",trans,"-",i))
-        cat("\n\n finished ",set,"-",trans,"-",i,"\n",out$documentation$test_eval_finalModel,"\n")
+        cat("\n\n finished ",set,"-",trans,"-",i,"\n\n")
+        print(out$documentation$test_eval_finalModel)
       }
       
     }
@@ -139,13 +142,13 @@ Auto_spc<-inner_join(Auto,spc_data_clean,by="date")
   }
 }
 
-# aggregating evaluation
+# aggregating evaluation for test sets ####
 plotlist<-list()
 cubist_model_eval_table<-c()
 for (i in list.files("~/Documents/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/temp/",full.names = T)){
   model<-read_rds(i)
   model_name<-basename(i)
-  
+  # calculating obs / pred
   if (model_name%>%str_detect("spc-")){
     if(model$documentation$trans=="none"){
       test_ObsPred<-data.frame(pred=predict(model,model$testingData$spc),obs=model$testingData[[1]])
@@ -168,13 +171,15 @@ for (i in list.files("~/Documents/GitHub/ADDRESS-adit_drainage_solute_source_con
     }
     set<-"spc_sg11_snv"
   }
-  
+  #plotting
   ggplot(test_ObsPred,aes(x=obs,y=pred))+
     geom_point()+
     geom_abline(intercept=0,slope=1,linetype="dotted")+
     ggtitle(basename(i))+
     theme_pubr()->plotlist[[basename(i)]]
   
+  
+  #calculating stats
   cubist_model_eval_table<-bind_rows(cubist_model_eval_table,
                                      data.frame(set=set,
                                                 trans=model$documentation$trans,
@@ -183,8 +188,84 @@ for (i in list.files("~/Documents/GitHub/ADDRESS-adit_drainage_solute_source_con
 }
 
 
+list(eval=cubist_model_eval_table,plots=plotlist)->Cubist_test_evaluation
+#saveRDS(Cubist_test_evaluation,"~/Documents/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/temp/Cubist_evaluation")
+# choose ther dir. code breaks with other objects in /temp
+
+var_sel<-"doc_mgL"
+ggplotly(
+{
+var_mods<-filter(Cubist_test_evaluation$eval,variable==var_sel)
+best_mod<-var_mods[which.min(var_mods$rmse),]
+mod<-read_rds(paste0("~/Documents/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/temp/cubist-auto_",
+                     best_mod$set,
+                     "-",
+                     best_mod$trans,
+                     "-",
+                     var_sel))
 
 
+if(best_mod$trans=="log1p"){
+predictions_train<-data.frame(date=Auto_spc$date,
+                        pred=exp(predict(mod,Auto_spc[[best_mod$set]]))-1
+
+  )
+} else {
+    predictions<-data.frame(date=Auto_spc$date,
+                            pred=predict(mod,Auto_spc[[best_mod$set]])
+    )
+}
+
+
+  ggplot(data=Auto,aes(x=as.POSIXct(date),y=.data[[var_sel]]))+
+    geom_point(size=.1)+
+  geom_point(data=Auto[-c(mod$partition),],shape=3,col="red")+
+#  geom_line(linewidth=.2,alpha=.5)+
+  geom_line(data=predictions,aes(x=date,y=pred))+
+  ggtitle(paste0("cubist-auto_",
+                     best_mod$set,
+                     "-",
+                     best_mod$trans,
+                     "-",
+                     var_sel))+
+  ylab(var_sel)+
+  xlab("date")+
+  theme_pubr()
+}
+)
+
+
+
+
+### spectral importance plots
+ggplotly({
+mod$trainingData%>%
+  select(-c(`.outcome`))%>%
+  summarise_all(mean)%>%
+  t%>%
+  data.frame%>%
+  rownames_to_column->avg_spc
+names(avg_spc)<-c("nm","avg_absorbance")
+
+ggplot(avg_spc,aes(x=as.numeric(nm),
+                   y=avg_absorbance
+                   ))+
+  geom_line()+
+  geom_col(data=mod$finalModel$usage,aes(x=as.numeric(Variable),
+                                         y=Conditions/25,
+                                         fill="Conditions"))+
+  geom_col(data=mod$finalModel$usage,aes(x=as.numeric(Variable),
+                                         y=Model/25,
+                                         fill="Model"))+
+  ggtitle(paste0("cubist-auto_",
+                 best_mod$set,
+                 "-",
+                 best_mod$trans,
+                 "-",
+                 var_sel))+
+  theme_pubr()+
+  scale_y_continuous(sec.axis = sec_axis("Usage",trans = ~.*25))
+})
 
 
 
