@@ -7,67 +7,75 @@ library(ggpubr)
 #formula attribution for A12TH from icbm
 #setwd("~/Desktop/orbit trap RZ/Processed_data")
 
-A12_TH_orbitrap <- read.csv("~/GitHub/ADDRESS-adit_drainage_solute_source_control/data/Formula_attribution_A12TH_Feb2024.csv")
+A12_TH_orbitrap <- read.csv("~/Documents/GitHub/ADDRESS-adit_drainage_solute_source_control/data/Formula_attribution_A12TH_Feb2024.csv")
 
 # fixing names: all sample Names have to be named Sample_NAME_1.csv; NAME must not contain "_"
 names(A12_TH_orbitrap)[ which(str_detect(names(A12_TH_orbitrap),"Sample")&
                                 !str_detect(names(A12_TH_orbitrap),"_1.csv"))]<-
   str_replace(names(A12_TH_orbitrap)[ which(str_detect(names(A12_TH_orbitrap),"Sample")&
-                                  !str_detect(names(A12_TH_orbitrap),"_1.csv"))],
+                                              !str_detect(names(A12_TH_orbitrap),"_1.csv"))],
               ".csv","_1.csv")
 
 # renaming (pulling sample "NAME" from original "Sample_NAME_1.csv")
 names(A12_TH_orbitrap)[ which(str_detect(names(A12_TH_orbitrap),"Sample"))]<-
   strsplit(names(A12_TH_orbitrap)[which(str_detect(names(A12_TH_orbitrap),"Sample"))],"_")%>%
   map(2)%>%unlist
-  
+
+# long format -> 1 col sample id, 1 col intensities
 A12_TH_orbitrap%>%pivot_longer(
   # Find all columns that start with 'A12'
   cols=names(A12_TH_orbitrap)[which(str_detect(names(A12_TH_orbitrap),"A12."))],
   names_to = "Sample_ID",
   values_to = "Intensity"
-)->tmp
-
-
-
+)->A12_TH_orbitrap_long
 
   
-  # Select the relevant columns
-  data_subset <- A12_TH_orbitrap[c('Sample_ID','id', 'mz','diff','reference', 'formula', 'H.C', 'O.C','C','H','O','N','S','P','AI', 'AI.mod', 
-                                   'DBE','Aromatic','Highly.unsaturated','Unsaturated', 'Saturated', 
-                                   'Intensity')]
-  
-  # Calculate relative intensity
-  total_intensity <- sum(data_subset$Intensity, na.rm = TRUE)
-  data_subset$relative_intensity <- (data_subset$Intensity / total_intensity)
-  
-  # Calculate NOSC for each row
-  data_subset$NOSC <- 4 - ((4 * data_subset$C + data_subset$H - 3 * data_subset$N - 2 * data_subset$O) / data_subset$C)
-  
-  # Multiply and create new columns
-  cols_to_multiply <- c('mz', 'H.C', 'O.C', 'AI', 'AI.mod', 'DBE', 'Aromatic', 'Highly.unsaturated', 'Unsaturated','NOSC')
-  for(col in cols_to_multiply) {
-    new_col_name <- paste(col, 'weighted', sep = '_')
-    data_subset[[new_col_name]] <- data_subset[[col]] * data_subset$relative_intensity
-  }
-  
-  # Store the modified dataframe in the list
-  modified_dataframes[[col_name]] <- data_subset
-  
-  # Optionally, reset the column name for the next iteration
-  names(A12_TH_orbitrap)[names(A12_TH_orbitrap) == 'Intensity'] <- col_name
+
+# Selecting the subset of relevant columns
+A12_TH_orbitrap_subset <- A12_TH_orbitrap_long[c('Sample_ID', 'id', 'mz', 'diff', 'reference', 'formula', 'H.C', 'O.C', 'C', 'H', 'O', 'N', 'S', 'P', 'AI', 'AI.mod', 
+                     'DBE', 'Aromatic', 'Highly.unsaturated', 'Unsaturated', 'Saturated', 'Intensity')]
+
+
+# Calculate relative intensity
+# grouped sums for each unique Sample_ID
+A12_TH_orbitrap_subset%>%group_by(Sample_ID)%>%
+  summarise(Intensity_sums=sum(Intensity,na.rm = T))->Intensity_sums
+
+# joining by Sample_ID
+left_join(A12_TH_orbitrap_subset,Intensity_sums,by="Sample_ID")%>%
+  mutate(relative_Intensity=Intensity/Intensity_sums)->data_subset # rename to fit your workflow
+ 
+
+
+#### END OF SEANS MODIFICATIONS ####
+####################################
+
+# Calculate NOSC for each row
+data_subset$NOSC <- 4 - ((4 * data_subset$C + data_subset$H - 3 * data_subset$N - 2 * data_subset$O) / data_subset$C)
+
+# Multiply and create new columns
+cols_to_multiply <- c('mz', 'H.C', 'O.C', 'AI', 'AI.mod', 'DBE', 'Aromatic', 'Highly.unsaturated', 'Unsaturated', 'NOSC')
+for(col in cols_to_multiply) {
+  new_col_name <- paste(col, 'weighted', sep = '_')
+  data_subset[[new_col_name]] <- data_subset[[col]] * data_subset$relative_intensity
 }
+
+
+
+
+
+
 
 #rename modified dataframes for revised code
 modified_dataframes_A12TH <-   modified_dataframes
 
 # Iterate over each dataframe in the list
-for(i in seq_along(modified_dataframes_A12TH)) {
+for(i in seq_along(modified_dataframes)) {
   # Extract the name of the dataframe
-  df_name <- names(modified_dataframes_A12TH)[i]
+  df_name <- names(modified_dataframes)[i]
   
   # Extract the dataframe
-  df <- modified_dataframes_A12TH[[i]]
+  df <- modified_dataframes[[i]]
   
   # Create a filename using the dataframe name
   filename <- paste0(df_name, ".csv")
