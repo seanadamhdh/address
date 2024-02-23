@@ -5,9 +5,11 @@
 ########################################################################################################################################################
 # Loading Packages, sourcing code, loading and pre-processing spectra and reference data ####
 {# depending on OS root is different. Please adjust here
-  root_dir<-"C:/Users/adam/Documents"
+  root_dir<-"C:/Users/adam/Documents" # WINDOWS
+  root_dir<-"~Documents"              # UBUNTU
   
-  # sourcing some scripts from R_aian
+  
+  # sourcing some scripts from R_main
   source(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/packages.R"))
   source(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/evaluate_model_adjusted.R"))
   
