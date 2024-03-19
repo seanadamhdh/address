@@ -5,8 +5,8 @@
 ########################################################################################################################################################
 # Loading Packages, sourcing code, loading and pre-processing spectra and reference data ####
 {# depending on OS root is different. Please adjust here
-  root_dir<-"C:/Users/adam/Documents" # WINDOWS
-  root_dir<-"~Documents"              # UBUNTU
+  #root_dir<-"C:/Users/anitasanchez/Documents" # WINDOWS
+  root_dir<-"~/Documents"              # UBUNTU
   
   
   # sourcing some scripts from R_main
@@ -230,25 +230,31 @@
   
 ###########################################################################################################################################################
 #### displaying results ####  
+# Assuming root_dir and model_folder variables are defined and hold the desired path
+Cubist_test_evaluation <- readRDS(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control",model_folder,"/Cubist_evaluation"))
+
 # check  change in case it is different from above
 # set folder name
 model_folder<-"/models/Cubist_2024-02-21"
   # plot timeseries for variable:
-  var_sel<-"dic_mgL"
+  var_sel<-"Suva254"
   # best combination of spc-set and transformation is choosen based on lowest RMSEP (test-data)
+  
+  var_mods<-filter(Cubist_test_evaluation$eval,variable==var_sel)
+  best_mod<-var_mods[which.min(var_mods$rmse),]
+  mod<-read_rds(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control",model_folder,"/cubist-auto_",
+                       best_mod$set,
+                       "-",
+                       best_mod$trans,
+                       "-",
+                       var_sel))
+  
+  
+  
+  
   
   ggplotly(
     {
-      var_mods<-filter(Cubist_test_evaluation$eval,variable==var_sel)
-      best_mod<-var_mods[which.min(var_mods$rmse),]
-      mod<-read_rds(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control",model_folder,"/cubist-auto_",
-                           best_mod$set,
-                           "-",
-                           best_mod$trans,
-                           "-",
-                           var_sel))
-      
-      
       if(best_mod$trans=="log1p"){
         predictions<-data.frame(Auto_spc,
                                 pred=exp(predict(mod,Auto_spc[[best_mod$set]]))-1
@@ -292,8 +298,53 @@ model_folder<-"/models/Cubist_2024-02-21"
     }
   )
   
-  
-  
+##modifing time frame   
+  ggplotly(
+    {
+      if(best_mod$trans=="log1p"){
+        predictions<-data.frame(Auto_spc,
+                                pred=exp(predict(mod,Auto_spc[[best_mod$set]]))-1
+        )
+      } else {
+        predictions<-data.frame(Auto_spc,
+                                pred=predict(mod,Auto_spc[[best_mod$set]])
+        )
+      }
+      
+      # !!! there should not be NAs except in var_sel !!!
+      ref_data<-na.omit(select(Auto_spc,all_of(c("Sample_ID","campaign","site_id","date",var_sel))))
+      
+      ggplot(data=ref_data,aes(x=as.POSIXct(date),
+                               y=.data[[var_sel]]))+
+        geom_point(aes(size="training",
+                       shape="training",
+                       color="training"
+        ))+
+        geom_point(data=ref_data[-c(mod$partition),],
+                   aes(size="testing",
+                       shape="testing",
+                       color="testing"
+                   ),stroke=1)+
+        #  geom_line(linewidth=.2,alpha=.5)+
+        geom_line(data=predictions,aes(
+          x=date,
+          y=pred))+
+        ggtitle(paste0("cubist-auto_",
+                       best_mod$set,
+                       "-",
+                       best_mod$trans,
+                       "-",
+                       var_sel))+
+        ylab(var_sel)+
+        xlab("date")+
+        ylab("Suva254")+
+        scale_size_manual("Set",breaks=c("training","testing"),values=c(.5,2))+
+        scale_shape_manual("Set",breaks=c("training","testing"),values=c(16,3))+
+        scale_color_manual("Set",breaks=c("training","testing"),values=c("black","red3"))+
+        scale_x_datetime(limits = as.POSIXct(c("2022-05-16", "2022-09-20"))) +
+        theme_pubr()
+    }
+  )
   
   ### spectral importance plots
   ggplotly({
@@ -327,8 +378,9 @@ model_folder<-"/models/Cubist_2024-02-21"
 
 ########################################################################################################################################################
 
-
-
+#looking at raw model testing vs predictions
+plot(mod$testingData$Suva254,predict(mod,mod$testingData$spc))
+ abline(0,1)
 
 
 
