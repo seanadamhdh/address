@@ -4,7 +4,7 @@
 #' MF2: 22130200
 
 # lazy loading of packages (make sure package_load.R is in wd)
-source("package_load.R")
+#source("package_load.R")
 #--------------------------------------------------------------------------------------------------------------------------------------------
 #' generalised fingerprint load-in
 #' @param directory filepath of fingerprint-folder
