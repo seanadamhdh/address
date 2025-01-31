@@ -6,21 +6,19 @@
 # If wavelength range is < max, no of cols remain the same but are filled with nan --> keep seq(200,750,2.5), even though data only to 720
 
 ##############################
-source("packages.R")
-source("./old imported scripts/Spectrolyzer_load_good.R")
+source("./R_main/packages.R")
+source("./R_main/old imported scripts/Spectrolyzer_load_good.R")
 
-all_mine_spc=Spectro_batch_load(parent_dir = "//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/field_data/data/ADRESS/Spectrolyzer/Spectro_data/",
+all_mine_spc=Spectro_batch_load(parent_dir = "//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/field_data/data/ADDRESS/Spectrolyzer/Spectro_data/",
                                 wavelengths = seq(200,750,2.5), #keep as is
                                 parameters = c("DOCeq",
-                                                "Flags",
                                                 "TOCeq",
-                                                "Flags",
                                                 "Turbidity",
-                                                "Flags",
                                                 "Temperature"
                                                ),
-                                zip = F)
-saveRDS(all_mine_spc,"//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/field_data/data/ADRESS/Spectrolyzer/spectrolyzer_all")
+                                zip = F,
+                                read_param = T)
+saveRDS(all_mine_spc,"//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/field_data/data/ADDRESS/Spectrolyzer/spectrolyzer_all_inclParam")
 
 
 
@@ -34,17 +32,41 @@ saveRDS(all_mine_spc,"//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/field_data/dat
 ## load spc data 
 # my_spc_data=readRDS(...path-to-prepared-data) or =read_csv ...
 
-some_model=readRDS(paste0("C:/Users/adam/Documents/GitHub/",                                      # path to GitHub dir (alt. download from GitHub)
-                          "ADDRESS-adit_drainage_solute_source_control/models/Cubist_2024-02-21/",# dir to models
-                          "cubist-auto_spc-log1p-Al_mgL"                                          # specific model
-                          )
-)
 
+# model folder
+model_dir="//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/projects/ADDRESS/models/Cubist_2024-02-21/"
 
+eval=readRDS(paste0(model_dir,"Cubist_evaluation"))
 
-predicitions=predict(some_model,my_spc_data)
-
-# vector
+predict_spectrolyzer=function(
+    # spectra set, tibble with colnames == spc wavelengths, 
+    X, 
+    # path to folders with models
+    model_dir="//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/projects/ADDRESS/models/Cubist_2024-02-21/",
+    
+    # target variable
+    variable="Suva254",
+    
+    # target varaible transformation (log1p / none)
+    trans="log1p",
+    
+    # spc preprocessing (spc / spc_sg11)
+    set="spc",
+    
+    prefix="cubist-auto" # currently only cubist-auto, but for generalisation
+                  
+){
+  
+  mod=readRDS(paste0(model_dir,"/",prefix,"_",set,"-",trans,"-",variable))
+  
+  
+  if(colnames(X)!=colnames(mod$training_data[,-c(".outcome")])){
+    errorCondition("Xu does not match Xr")
+    
+  }
+  
+  
+}
 
 
 

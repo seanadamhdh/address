@@ -4,21 +4,28 @@
 #' MF2: 22130200
 
 # lazy loading of packages (make sure package_load.R is in wd)
-#source("package_load.R")
+source("./R_main/packages.R")
 #--------------------------------------------------------------------------------------------------------------------------------------------
-#' generalised fingerprint load-in
+#' @title generalised fingerprint load-in
+#' @description
+#' NOTE: Removes flagged spectra.
+#' 
 #' @param directory filepath of fingerprint-folder
 #' @param wavelengths col-names of measured wavelengths. default is 200-750 in 2.5 nm, steps
+#' @param sel_wavelengths Range of wavelengths that shall be returned
 #' @param id Should serial No be added as column to the tibble (for ID-ing the spectrolyzer later). Default=T
 Spectro_load_fingerprint<-function(directory,
                                    wavelengths=seq(200,750,2.5),
+                                   sel_wavelengths=seq(200,722.5,2.5),
                                    id=T){
   # load file
-  temp<-read_csv(paste0(directory,
+  temp<-suppressMessages(#silent read-in
+    read_csv(paste0(directory,
                         "/",
                         list.files(directory,pattern = ".csv") #actual filename
                         ),
                  col_types = cols(Timestamp = col_datetime(format = "%Y-%m-%dT%H:%M:%S+0000")))
+  )
   # rename cols
   names(temp)<-c("Date_Time",format(wavelengths,nsmall=1),"Flags")
   # POSIXct format
@@ -31,7 +38,9 @@ Spectro_load_fingerprint<-function(directory,
     #' rm nan cols (no data recorded for these wavelengths) 
     #' using first() because i guess it's faster
     #' if issues come up replace with all()
-    select_if(~is.nan(first(.))!=T)->temp
+    select_if(~is.nan(first(.))!=T)%>%
+    # select desired range
+    select(all_of(c("Date_Time",format(sel_wavelengths,nsmall=1))))->temp
   
   if(id==T){
     Serial_No<-read.delim(paste0(directory,
@@ -47,7 +56,8 @@ Spectro_load_fingerprint<-function(directory,
 #--------------------------------------------------------------------------------------------------------------------------------------------
 #' generalised parameter load-in
 #' @param directory filepath of parameter folder
-#' @param parameters list of recorded parameters, forming col-names (Default is Temperature only)
+#' @param parameters list of recorded parameters, forming col-names (Default is Temperature only). Must match order in csv. 
+#' e.g. ... DOCeq | Flags | TOCeq | Flags would require c("DOCeq","TOCeq")
 #' @param id Should serial No be added as column to the tibble (for ID-ing the spectrolyzer later). Default=T
 Spectro_load_parameter<-function(directory,
                                  parameters=c("Temp"),
@@ -60,29 +70,43 @@ Spectro_load_parameter<-function(directory,
                  col_types = cols(Timestamp = col_datetime(format = "%Y-%m-%dT%H:%M:%S+0000"),
                                   Flags = col_character()))
   # rename cols
-  names(temp)<-c("Date_Time",parameters,"Flags")
+  # fix for multiple Flag cols
+  namelist=c("Date_Time")
+  for (i in parameters){
+    namelist=c(namelist,i,paste0("Flags_",i))
+  }
+  
+  print(namelist)
+  names(temp)<-namelist
+  
   # POSIXct format
   temp$Date_Time<-as.POSIXct(temp$Date_Time)
-  
-  # remove flagged cols (e.g. "NO MEDIUM" Error, but also other possible error-rows)
-  temp%>%filter(across(contains("Flags"), ~ is.na(.)) %>% rowSums() == ncol(select(., contains("Flags"))))%>%
-    #' rm Flags (did it's job)
-    select(-contains("Flags"))%>%
-    #' rm nan cols (no data recorded for these wavelengths) 
-    #' using first() because i guess it's faster
-    #' if issues come up replace with all()
-    select_if(~is.nan(first(.))!=T)->temp
-  if(id==T){
-  Serial_No<-read.delim(paste0(directory,
-                               "/",
-                               list.files(directory,pattern = ".csv") #actual filename
-                               ), 
-                        header=FALSE)[1,1]%>%substr(str_locate(.,"sensorSerial:")[2]+1, # start of serialNo.
-                                                    str_locate(.,"sensorSerial:")[2]+8) # end of serialNo, assuming 8 digits
-  temp$Serial_No<-rep(Serial_No,length(temp[[1]]))
-  }
   return(temp)
 }
+
+#### LEGACY CODE #### 
+#' used to remove flagged parameter values... Sosa spectrolyzer only recorded Temperature... easy. Mine spectrolyzer has multiple columns with individual flags.
+#' Rewrote code above to give unique flag names. No flag columns are handed on to batch load. Easy solution and makes sense to keep flags for future filtering instead of 
+#' dumping all rows with any flags.
+  #' # remove flagged cols (e.g. "NO MEDIUM" Error, but also other possible error-rows)
+  #' temp%>%filter(across(contains("Flags"), ~ is.na(.)) %>% rowSums() == ncol(select(., contains("Flags"))))%>%
+  #'   #' rm Flags (did it's job)
+  #'   select(-contains("Flags"))%>%
+  #'   #' rm nan cols (no data recorded for these wavelengths) 
+  #'   #' using first() because i guess it's faster
+  #'   #' if issues come up replace with all()
+  #'   select_if(~is.nan(first(.))!=T)->temp
+  #' if(id==T){
+  #' Serial_No<-read.delim(paste0(directory,
+  #'                              "/",
+  #'                              list.files(directory,pattern = ".csv") #actual filename
+  #'                              ), 
+  #'                       header=FALSE)[1,1]%>%substr(str_locate(.,"sensorSerial:")[2]+1, # start of serialNo.
+  #'                                                   str_locate(.,"sensorSerial:")[2]+8) # end of serialNo, assuming 8 digits
+  #' temp$Serial_No<-rep(Serial_No,length(temp[[1]]))
+  #' }
+  #' return(temp)
+  #'}
 #--------------------------------------------------------------------------------------------------------------------------------------------
 #' merging of fingerprint and parameter files
 #' @param fingerprint fingerprint tibble, created by Spectro_load_fingerprints
@@ -137,6 +161,7 @@ unzip_local<-function(zip_directory,new_dir=NULL){
 #' enables load-in of multipe scpectrolyzer-zip-files or already un-zipped files to coherent tibble
 #' @param parent_dir path of folder containing the zip- or un-zipped files
 #' @param wavelengths col-names of measured wavelengths. default is 200-750 in 2.5 m, steps
+#' @param sel_wavelengths Range of wavelengths that shall be returned
 #' @param parameters list of recorded parameters, forming col-names (Default is Temperature only)
 #' @param zip Are zip-files (T) or already unzipped files (F) loaded? Default is zip=T.
 #' @param exclude Are there unwanted zip-files (when zip=T) or folders (when zip=F)? 
@@ -146,6 +171,7 @@ unzip_local<-function(zip_directory,new_dir=NULL){
 #' of the original directory
 Spectro_batch_load<-function(parent_dir,
                              wavelengths=seq(200,750,2.5),
+                             sel_wavelengths=seq(200,722.5,2.5),
                              parameters=c("Temp"),
                              zip=T,
                              exclude=NA,
@@ -191,13 +217,13 @@ Spectro_batch_load<-function(parent_dir,
   for (i in folders){
     # fingerprint read-in
     if(str_detect(i,"fingerprint")){
-    S_fp<-bind_rows(S_fp,Spectro_load_fingerprint(i,wavelengths = wavelengths,id=T))
+    S_fp<-bind_rows(S_fp,Spectro_load_fingerprint(i, wavelengths = wavelengths, sel_wavelengths = sel_wavelengths, id=T))
     
     # parameter read-in
-    }else if(str_detect(i,"parameter")&read_param=="T"){
+    }else if(str_detect(i,"parameter")&read_param==TRUE){
     S_par<-bind_rows(S_par,Spectro_load_parameter(i,parameters = parameters,id=F)) # faster without double Serial-No. read-in
     # ERROR case
-    }else if(read_param=="T"){
+    }else if(read_param==FALSE){
       print("skipping parameter data")
     }else
       print("ERROR Unknown folder. Only folders containing 'fingerprint' or 'parameter' designation are allowed")
@@ -212,7 +238,7 @@ Spectro_batch_load<-function(parent_dir,
   }
   #' remove duplicates, which may have been caused by overlapping timeframes of teh readouts
   #' which are ultimately the zip files that were read in earlier
-  Spectro_data<-distinct(Spectro_data,paste(Date_Time,Serial_No),.keep_all = T)
+  Spectro_data<-distinct(Spectro_data,paste(format(Date_Time,"%d.%m.%Y-%H:%M:%S"),Serial_No),.keep_all = T) #aslo creates unique column
   names(Spectro_data)[length(Spectro_data)]<-"identifier"
   return(Spectro_data)
 }
