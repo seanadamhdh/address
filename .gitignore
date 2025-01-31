@@ -2,3 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
+.DS_Store
+./R_main/Rproj.user
+./R_main/temp
