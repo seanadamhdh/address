@@ -2,12 +2,15 @@
 
 
 
-########################################################################################################################################################
+####################################################################################################################################################### #
 # Loading Packages, sourcing code, loading and pre-processing spectra and reference data ####
 {# depending on OS root is different. Please adjust here
-  root_dir<-"C:/Users/adam/Documents"
+  root_dir<-"C:/Users/adam/Documents" # WINDOWS Sean
+  #root_dir<-"C:/Users/anitasanchez/Documents" # WINDOWS Anita
+  #root_dir<-"~/Documents"              # UBUNTU
   
-  # sourcing some scripts from R_aian
+  
+  # sourcing some scripts from R_main
   source(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/packages.R"))
   source(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/evaluate_model_adjusted.R"))
   
@@ -26,14 +29,15 @@
   
   # load datasets ####
   
-  # load spc
+  ## load spc ####
   spc_data_raw <- read_excel(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/data/processed/allspecoriginal_Oct2023.xlsx"))
   spc_data<-tibble(spc_data_raw[1],spc=spc_data_raw[-1])
   
-  # plot raw spc
+  ### plot raw spc ####
   plot_spc(spc_data$spc)
   
-  # rm very off spc (outliers, bad scans in aggregates, etc.)
+  ### remove bad scans and plot again ####
+  # rm very off spc (outliers, bad scans in aggregates, etc.) 
   filter(spc_data,rowSums(spc<=0)==0&rowSums(spc>4.5)==0)->spc_data_clean
   plot_spc(spc_data_clean$spc)
   
@@ -44,11 +48,12 @@
     "\nremaining spectra:\t",nrow(spc_data_clean)
   )
   
-  ##################################
+  ################################## #
   # IMPLEMENTED SOME PREPROCESSING #
-  ##################################
+  ################################## #
   
-  # smoothing
+
+  ### smoothing ####
   spc_data_clean$spc_sg11<-
     savitzkyGolay(spc_data_clean$spc,
                   p=3,
@@ -56,12 +61,12 @@
                   w=11)
   plot_spc(spc_data_clean$spc_sg11)
   
-  # SNV
+  ### SNV ####
   spc_data_clean$spc_sg11_snv<-standardNormalVariate(spc_data_clean$spc_sg11)
   plot_spc(spc_data_clean$spc_sg11_snv)
   
   
-  # load manual samples
+  ## load manual samples ####
   Regular <- read_excel(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/data/Regularsampling_A12_clean.xlsx"))
   Regular_TOP <- filter(Regular,!str_detect(Sample_ID,"BH1"))
   Regular_TOP_spc<-inner_join(Regular_TOP,spc_data_clean,by="date")
@@ -71,16 +76,16 @@
   
   
   
-  # load autosampler
+  ## load autosampler ####
   Auto <- read_csv(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/data/Autosampler_A12_clean.csv"))[-1]
   Auto_spc<-inner_join(Auto,spc_data_clean,by="date")
 }
-########################################################################################################################################################
+####################################################################################################################################################### #
 
 
-##################################################################################################################
+################################################################################################################# #
 # Calibration with Auto Sets ####
-{
+if(F){ # safety... set T to run
   #select spc set manually (when loop inactive)
   # set<-"spc_sg11_snv"
   
@@ -159,12 +164,12 @@
     
   }
 }
-########################################################################################################################################################
+####################################################################################################################################################### #
 
-###########################################################################################################################################################
-#  evaluation for test sets ####
+########################################################################################################################################################## #
+#  Model evaluation using test sets ####
 # init
-{
+if(F){ #safety, set to T if you want to rerun this chunk
   plotlist<-list()
   cubist_model_eval_table<-c()
   
@@ -225,28 +230,41 @@
   # save results 
   saveRDS(Cubist_test_evaluation,paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control",model_folder,"/Cubist_evaluation"))
 }
+
   
-###########################################################################################################################################################
-#### displaying results ####  
+########################################################################################################################################################## #
+# displaying results ####  
+# Assuming root_dir and model_folder variables are defined and hold the desired path
+
+## re-loading results ####
+# ...originally created in chunk above
+Cubist_test_evaluation <- readRDS(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control",model_folder,"/Cubist_evaluation"))
+
 # check  change in case it is different from above
 # set folder name
 model_folder<-"/models/Cubist_2024-02-21"
-  # plot timeseries for variable:
-  var_sel<-"dic_mgL"
+
+# available variables
+Cubist_test_evaluation$eval$variable%>%unique
+  ## plot timeseries for variable:___ ####
+  var_sel<-"Cd_mgL"
   # best combination of spc-set and transformation is choosen based on lowest RMSEP (test-data)
   
+  var_mods<-filter(Cubist_test_evaluation$eval,variable==var_sel)
+  best_mod<-var_mods[which.min(var_mods$rmse),]
+  mod<-read_rds(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control",model_folder,"/cubist-auto_",
+                       best_mod$set,
+                       "-",
+                       best_mod$trans,
+                       "-",
+                       var_sel))
+  
+  
+  
+  
+  ## main plot 1 - timeseries ####
   ggplotly(
     {
-      var_mods<-filter(Cubist_test_evaluation$eval,variable==var_sel)
-      best_mod<-var_mods[which.min(var_mods$rmse),]
-      mod<-read_rds(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control",model_folder,"/cubist-auto_",
-                           best_mod$set,
-                           "-",
-                           best_mod$trans,
-                           "-",
-                           var_sel))
-      
-      
       if(best_mod$trans=="log1p"){
         predictions<-data.frame(Auto_spc,
                                 pred=exp(predict(mod,Auto_spc[[best_mod$set]]))-1
@@ -290,10 +308,57 @@ model_folder<-"/models/Cubist_2024-02-21"
     }
   )
   
+## main plot 2 - timeseries cropped ####
+  #modifing time frame   
+  ggplotly(
+    {
+      if(best_mod$trans=="log1p"){
+        predictions<-data.frame(Auto_spc,
+                                pred=exp(predict(mod,Auto_spc[[best_mod$set]]))-1
+        )
+      } else {
+        predictions<-data.frame(Auto_spc,
+                                pred=predict(mod,Auto_spc[[best_mod$set]])
+        )
+      }
+      
+      # !!! there should not be NAs except in var_sel !!!
+      ref_data<-na.omit(select(Auto_spc,all_of(c("Sample_ID","campaign","site_id","date",var_sel))))
+      
+      ggplot(data=ref_data,aes(x=as.POSIXct(date),
+                               y=.data[[var_sel]]))+
+        geom_point(aes(size="training",
+                       shape="training",
+                       color="training"
+        ))+
+        geom_point(data=ref_data[-c(mod$partition),],
+                   aes(size="testing",
+                       shape="testing",
+                       color="testing"
+                   ),stroke=1)+
+        #  geom_line(linewidth=.2,alpha=.5)+
+        geom_line(data=predictions,aes(
+          x=date,
+          y=pred))+
+        ggtitle(paste0("cubist-auto_",
+                       best_mod$set,
+                       "-",
+                       best_mod$trans,
+                       "-",
+                       var_sel))+
+        ylab(var_sel)+
+        xlab("date")+
+        ylab(var_sel)+
+        scale_size_manual("Set",breaks=c("training","testing"),values=c(.5,2))+
+        scale_shape_manual("Set",breaks=c("training","testing"),values=c(16,3))+
+        scale_color_manual("Set",breaks=c("training","testing"),values=c("black","red3"))+
+        scale_x_datetime(limits = as.POSIXct(c("2022-05-16", "2022-09-20"))) +
+        theme_pubr()
+    }
+  )
   
-  
-  
-  ### spectral importance plots
+  ## main plot 3 - spectral importance ####
+  # spectral importance plots
   ggplotly({
     mod$trainingData%>%
       select(-c(`.outcome`))%>%
@@ -320,13 +385,14 @@ model_folder<-"/models/Cubist_2024-02-21"
                      "-",
                      var_sel))+
       theme_pubr()+
-      scale_y_continuous(sec.axis = sec_axis("Usage",trans = ~.*25))
+      scale_y_continuous(sec.axis = sec_axis("Usage",transform = ~.*25))
   })
 
-########################################################################################################################################################
+####################################################################################################################################################### #
 
-
-
+## plot 4 - raw model testing obs vs predictions ####
+plot(mod$testingData[[var_sel]],predict(mod,mod$testingData[[best_mod$set]]))
+ abline(0,1)
 
 
 

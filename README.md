@@ -1,13 +1,29 @@
 ADDRESS
 ================
 Anita Alexandra Sanchez, Sean Adam
-2024-02-19
+2025-01-31
 
+- [IMPORTANT MESSAGE](#important-message)
 - [ADDRESS data exchange and online
   repository](#address-data-exchange-and-online-repository)
   - [GENERAL UPLOAD RULES /
     GUIDELINES](#general-upload-rules--guidelines)
   - [MORE INFORMATION](#more-information)
+
+# IMPORTANT MESSAGE
+
+**Restructured version of the GitHub repository.**
+
+- /Anita does not want….. -\> deleted, no content
+
+- /GIS -\> zfs1/…/hydropedo/projects/ADDRESS/
+
+- /data -\> zfs1/…/hydropedo/projects/ADDRESS/
+
+- /models -\> zfs1/…/hydropedo/projects/ADDRESS/
+
+- /R_main -\>
+  gitlab.hrz.tu-chemnitz.de/sa56kotu-at-tu-freiberg-de/ADDRESS
 
 # ADDRESS data exchange and online repository
 
