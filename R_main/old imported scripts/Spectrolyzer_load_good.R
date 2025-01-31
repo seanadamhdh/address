@@ -65,9 +65,9 @@ Spectro_load_parameter<-function(directory,
   temp$Date_Time<-as.POSIXct(temp$Date_Time)
   
   # remove flagged cols (e.g. "NO MEDIUM" Error, but also other possible error-rows)
-  subset(temp,is.na(Flags))%>%
+  temp%>%filter(across(contains("Flags"), ~ is.na(.)) %>% rowSums() == ncol(select(., contains("Flags"))))%>%
     #' rm Flags (did it's job)
-    select(-c("Flags"))%>%
+    select(-contains("Flags"))%>%
     #' rm nan cols (no data recorded for these wavelengths) 
     #' using first() because i guess it's faster
     #' if issues come up replace with all()
@@ -140,6 +140,7 @@ unzip_local<-function(zip_directory,new_dir=NULL){
 #' @param parameters list of recorded parameters, forming col-names (Default is Temperature only)
 #' @param zip Are zip-files (T) or already unzipped files (F) loaded? Default is zip=T.
 #' @param exclude Are there unwanted zip-files (when zip=T) or folders (when zip=F)? 
+#' @param read_param If TRUE, parameter fiels are read in, else skipped (...fix issues before setting TRUE)
 #' If so, list them in a vector and they will be disregarded.
 #' @notes if zip files are loaded, the unzipped folders are put in a new parent folder called "data" inside
 #' of the original directory
@@ -147,7 +148,8 @@ Spectro_batch_load<-function(parent_dir,
                              wavelengths=seq(200,750,2.5),
                              parameters=c("Temp"),
                              zip=T,
-                             exclude=NA){
+                             exclude=NA,
+                             read_param=FALSE){
   
   # check if directroy string ends with "/"; if not, add it
   if(str_ends(parent_dir,"/")==F){
@@ -192,17 +194,22 @@ Spectro_batch_load<-function(parent_dir,
     S_fp<-bind_rows(S_fp,Spectro_load_fingerprint(i,wavelengths = wavelengths,id=T))
     
     # parameter read-in
-    }else if(str_detect(i,"parameter")){
+    }else if(str_detect(i,"parameter")&read_param=="T"){
     S_par<-bind_rows(S_par,Spectro_load_parameter(i,parameters = parameters,id=F)) # faster without double Serial-No. read-in
     # ERROR case
-    }else{
+    }else if(read_param=="T"){
+      print("skipping parameter data")
+    }else
       print("ERROR Unknown folder. Only folders containing 'fingerprint' or 'parameter' designation are allowed")
-    }
   }
   
-  # combining fingerprint and parameter tables
-  Spectro_data<-Spectro_merge_col(S_fp,S_par)
   
+  # combining fingerprint and parameter tables
+  if(read_param){
+    Spectro_data<-Spectro_merge_col(S_fp,S_par)
+  }else{
+    Spectro_data=S_fp
+  }
   #' remove duplicates, which may have been caused by overlapping timeframes of teh readouts
   #' which are ultimately the zip files that were read in earlier
   Spectro_data<-distinct(Spectro_data,paste(Date_Time,Serial_No),.keep_all = T)

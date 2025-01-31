@@ -24,3 +24,38 @@ saveRDS(all_mine_spc,"//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/field_data/dat
 
 
 
+
+
+
+
+
+#################################
+
+## load spc data 
+# my_spc_data=readRDS(...path-to-prepared-data) or =read_csv ...
+
+some_model=readRDS(paste0("C:/Users/adam/Documents/GitHub/",                                      # path to GitHub dir (alt. download from GitHub)
+                          "ADDRESS-adit_drainage_solute_source_control/models/Cubist_2024-02-21/",# dir to models
+                          "cubist-auto_spc-log1p-Al_mgL"                                          # specific model
+                          )
+)
+
+
+
+predicitions=predict(some_model,my_spc_data)
+
+# vector
+
+
+
+
+
+
+
+
+
+
+
+
+
+
