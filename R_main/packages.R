@@ -1,9 +1,9 @@
 # automatically installes and loads useful packages.
 # some packages might have some issues with dependancies / R versions / OS
 
-if(!require(Rtools)){
-  install.packages("Rtools")
-  require(Rtools)}
+# if(!require(Rtools)){
+#   install.packages("Rtools")
+#  require(Rtools)}
 if(!require(devtools)){
   install.packages("devtools")
   require(devtools)}
@@ -54,10 +54,10 @@ if(!require(plotly)){
   require(plotly)}
 
 # geospatial stuff
-if(!require(rgdal)){
-  install.packages("rgdal")
-  require(rgdal)
-}
+#if(!require(rgdal)){
+#  install.packages("rgdal")
+#  require(rgdal)
+#}
 if(!require(sf)){
   install.packages("sf")
   require(sf)
