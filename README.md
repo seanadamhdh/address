@@ -12,8 +12,7 @@ Anita Alexandra Sanchez, Sean Adam
 
 # IMPORTANT MESSAGE
 
-**This project will be archived. Code will be moved to GitLab
-repository.**
+**Restructured version of the GitHub repository.**
 
 - /Anita does not want….. -\> deleted, no content
 
