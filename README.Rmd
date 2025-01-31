@@ -17,6 +17,20 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# IMPORTANT MESSAGE
+
+**This project will be archived. Code will be moved to GitLab repository.**
+
+-   /Anita does not want..... -\> deleted, no content
+
+-   /GIS -\> zfs1/.../hydropedo/projects/ADDRESS/
+
+-   /data -\> zfs1/.../hydropedo/projects/ADDRESS/
+
+-   /models -\> zfs1/.../hydropedo/projects/ADDRESS/
+
+-   /R_main -\> gitlab.hrz.tu-chemnitz.de/sa56kotu-at-tu-freiberg-de/ADDRESS
+
 # ADDRESS data exchange and online repository
 
 This repository serves as a platform for data exchange and its collaborative examination for the ADDRESS project.
