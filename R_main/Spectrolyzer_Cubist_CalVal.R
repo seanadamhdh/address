@@ -5,14 +5,16 @@
 ####################################################################################################################################################### #
 # Loading Packages, sourcing code, loading and pre-processing spectra and reference data ####
 {# depending on OS root is different. Please adjust here
-  root_dir<-"C:/Users/adam/Documents" # WINDOWS Sean
-  #root_dir<-"C:/Users/anitasanchez/Documents" # WINDOWS Anita
-  #root_dir<-"~/Documents"              # UBUNTU
+  data_dir="//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/"
+  
+  code_dir<-"C:/Users/adam/Documents" # WINDOWS Sean
+  #code_dir<-"C:/Users/anitasanchez/Documents" # WINDOWS Anita
+  #code_dir<-"~/Documents"              # UBUNTU
   
   
   # sourcing some scripts from R_main
-  source(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/packages.R"))
-  source(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/evaluate_model_adjusted.R"))
+  source(paste0(code_dir,"/GitLab/ADDRESS/R_main/packages.R"))
+  source(paste0(code_dir,"/GitLab/ADDRESS/R_main/evaluate_model_adjusted.R"))
   
   #simple function for plotting
   plot_spc<-function(spc){
@@ -27,10 +29,11 @@
   }
   
   
+  ###
   # load datasets ####
   
   ## load spc ####
-  spc_data_raw <- read_excel(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/data/processed/allspecoriginal_Oct2023.xlsx"))
+  spc_data_raw <- read_excel(paste0(data_dir,"/projects/ADDRESS/data/processed/allspecoriginal_Oct2023.xlsx"))
   spc_data<-tibble(spc_data_raw[1],spc=spc_data_raw[-1])
   
   ### plot raw spc ####
@@ -67,7 +70,7 @@
   
   
   ## load manual samples ####
-  Regular <- read_excel(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/data/Regularsampling_A12_clean.xlsx"))
+  Regular <- read_excel(paste0(data_dir,"/projects/ADDRESS/data/Regularsampling_A12_clean.xlsx"))
   Regular_TOP <- filter(Regular,!str_detect(Sample_ID,"BH1"))
   Regular_TOP_spc<-inner_join(Regular_TOP,spc_data_clean,by="date")
   
@@ -77,7 +80,7 @@
   
   
   ## load autosampler ####
-  Auto <- read_csv(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/data/Autosampler_A12_clean.csv"))[-1]
+  Auto <- read_csv(paste0(data_dir,"/projects/ADDRESS/data/Autosampler_A12_clean.csv"))[-1]
   Auto_spc<-inner_join(Auto,spc_data_clean,by="date")
 }
 ####################################################################################################################################################### #
