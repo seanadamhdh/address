@@ -9,6 +9,9 @@
 source("./R_main/packages.R")
 source("./R_main/old imported scripts/Spectrolyzer_load_good.R")
 
+
+
+if(F){
 all_mine_spc=Spectro_batch_load(parent_dir = "//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/field_data/data/ADDRESS/Spectrolyzer/Spectro_data/",
                                 wavelengths = seq(200,750,2.5), #keep as is
                                 parameters = c("DOCeq",
@@ -21,7 +24,7 @@ all_mine_spc=Spectro_batch_load(parent_dir = "//zfs1.hrz.tu-freiberg.de/fak3ibf/
 
 saveRDS(all_mine_spc,"//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/field_data/data/ADDRESS/Spectrolyzer/spectrolyzer_all_inclParam")
 
-
+}
 
 
 ###############################################################
@@ -118,7 +121,15 @@ View(eval$eval)
 
 # example predictions
 
-predict()
+variable="Zn_mgL"
+best_mod_eval=filter(eval$eval,variable==variable)%>%filter(rmse==min(rmse))
+
+Zn_pred=predict_spectrolyzer(all_mine$spc,variable=variable,
+                     trans=best_mod_eval$trans,
+                     set = best_mod_eval$set,
+                     model_dir = model_dir,
+                     prefix = "cubist_auto"
+                     )
 
 
 
