@@ -1,18 +1,26 @@
 ADDRESS
 ================
 Anita Alexandra Sanchez, Sean Adam
-2025-01-31
+2025-02-19
 
-- [IMPORTANT MESSAGE](#important-message)
+- [IMPORTANT MESSAGE (UPDATE)](#important-message-update)
 - [ADDRESS data exchange and online
   repository](#address-data-exchange-and-online-repository)
   - [GENERAL UPLOAD RULES /
     GUIDELINES](#general-upload-rules--guidelines)
   - [MORE INFORMATION](#more-information)
 
-# IMPORTANT MESSAGE
+# IMPORTANT MESSAGE (UPDATE)
 
-**Restructured version of the GitHub repository.**
+(New) For better access **moved the ADDRESS project folder** that
+contains all data relevant for modelling **to Biogeochemie zfs1
+server**. zfs1/…/hydropedo/projects/ADDRESS -\>
+zfs1/…/fak3biogeochemie/03 Projects - Projekte/ADDRESS/ADDRESS.
+
+In zfs1/…/hydropedo/projects/ADDRESS, there is now a shortcut linking to
+the new location for easier access from the soil team side.
+
+(Original message) **Restructured version of the GitHub repository.**
 
 - /Anita does not want….. -\> deleted, no content
 

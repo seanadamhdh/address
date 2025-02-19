@@ -4,17 +4,26 @@
 
 ####################################################################################################################################################### #
 # Loading Packages, sourcing code, loading and pre-processing spectra and reference data ####
-{# depending on OS root is different. Please adjust here
-  data_dir="//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/"
+
+{
   
-  code_dir<-"C:/Users/adam/Documents" # WINDOWS Sean
-  #code_dir<-"C:/Users/anitasanchez/Documents" # WINDOWS Anita
-  #code_dir<-"~/Documents"              # UBUNTU
   
+  if(stringr::str_detect(osVersion,"Windows")){
+    #workpc/win-sean
+    data_dir="//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/"
+    code_dir="C:/Users/adam/Documentss/GitLab/" #<- set user
+  }else if(stringr::str_detect(osVersion,"Ubuntu")){
+    #ubuntu                       
+    data_dir="/run/user/1000/gvfs/smb-share:server=zfs1.hrz.tu-freiberg.de,share=fak3ibf/Hydropedo/"
+    code_dir="/home/hydropedo/Documents/GitLab/" #<- set user
+  }else{# e.g. macos
+    data_dir=""#...set
+    code_dir=""#...set
+  }
   
   # sourcing some scripts from R_main
-  source(paste0(code_dir,"/GitLab/ADDRESS/R_main/packages.R"))
-  source(paste0(code_dir,"/GitLab/ADDRESS/R_main/evaluate_model_adjusted.R"))
+  source(paste0(code_dir,"/address/R_main/packages.R"))
+  source(paste0(code_dir,"/address/R_main/evaluate_model_adjusted.R"))
   
   #simple function for plotting
   plot_spc<-function(spc){
@@ -27,6 +36,7 @@
             xlab="wavelength [nm]",
             ylab="absorbance [freedom /sq inch]") #look unit up
   }
+}  
   
   
   ###
@@ -304,6 +314,7 @@ Cubist_test_evaluation$eval$variable%>%unique
                        var_sel))+
         ylab(var_sel)+
         xlab("date")+
+        ylab("Cd (mg/L)")+
         scale_size_manual("Set",breaks=c("training","testing"),values=c(.5,2))+
         scale_shape_manual("Set",breaks=c("training","testing"),values=c(16,3))+
         scale_color_manual("Set",breaks=c("training","testing"),values=c("black","red3"))+
