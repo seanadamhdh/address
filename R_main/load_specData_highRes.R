@@ -17,16 +17,17 @@
     data_dir=""#...set
     code_dir=""#...set
   }
-  ##################################
-  # X-SCALING: conversion Lambda365-abs to spctrolyzer-abs... empiric
-  ##################################
+  ################################## #
+  # X-SCALING: conversion Lambda365-abs to spctrolyzer-abs... log10 -> ln conversion and cm-1 -> m-1 
+  ################################## #
   X_scaling=230.3
-  ###################################
+  ################################### #
   # sourcing some scripts from R_main
   source(paste0(code_dir,"/address/R_main/packages.R"))
   source(paste0(code_dir,"/address/R_main/evaluate_model_adjusted.R"))
+  source("./R_main/Spectrolyzer_load_good.R") #updated
   
-  #simple function for plotting
+  # simple function for plotting ####
   plot_spc<-function(spc){
     matplot(x=spc%>%colnames(),
             y=t(spc),
@@ -44,34 +45,13 @@
 # SerialNo 22130200 <- used to be in Sosa 
 
 
-##############################
+############################# #
 
 # If wavelength range is < max, no of cols remain the same but are filled with nan --> keep seq(200,750,2.5), even though data only to 720
 
-##############################
-source("./R_main/packages.R")
+############################# #
 
-source("./R_main/Spectrolyzer_load_good.R") #updated
-if(F){ #takes a while
-all_mine_spc=Spectro_batch_load(parent_dir = paste0(data_dir,"/field_data/data/ADDRESS/Spectrolyzer/Spectro_data/"),
-
-                                wavelengths = seq(200,750,2.5), #keep as is
-                                parameters = c("DOCeq",
-                                                "TOCeq",
-                                                "Turbidity",
-                                                "Temperature"
-                                               ),
-                                zip = F,
-                                read_param = T)
-
-
-
-saveRDS(all_mine_spc,paste0(data_dir,"/field_data/data/ADDRESS/Spectrolyzer/spectrolyzer_all_inclParam"))
-}
-#reload
-all_mine_spc=readRDS(paste0(data_dir,"/field_data/data/ADDRESS/Spectrolyzer/spectrolyzer_all_inclParam"))
-
-###############################################################
+############################################################## #
 #' function for chemometric model application
 #' 
 #' currenrly not really generaliszed, tailored to existing models
@@ -82,10 +62,9 @@ all_mine_spc=readRDS(paste0(data_dir,"/field_data/data/ADDRESS/Spectrolyzer/spec
 #' @param trans target variable transformation (e.g. log1p / none)
 #' @param set spc preprocessing (e.g., spc / spc_sg11  /spc_sg11_snv)
 #' @param prefix currently only cubist-auto, but for generalisation
+#' @returns Vector of predictions with length(Yu)=nrow(X). Vector indices correspond to rownumbers of X.
 #' 
 #' 
-#' 
-
 predict_spectrolyzer=function(
   X, 
   model_dir="//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/projects/ADDRESS/models/Cubist_2024-02-21/",
@@ -105,9 +84,12 @@ predict_spectrolyzer=function(
     errorCondition("Xu does not cover wavenumber range of Xr")
     return()
   }
-  ##########  IMPLEMENT MORE ERROR CHECKING / SAFETY FEATURES HERE ###################
+  ##########  IMPLEMENT MORE ERROR CHECKING / SAFETY FEATURES HERE ################### #
+  # ... if i'll ever have the time...
+  
   
   # Pre-Processing, if required
+  ## currently only implemented for the preprocessing types used in original calibration runs (default model_dir)
   if(str_detect(set,"sg11")){
     X=savitzkyGolay(X,m=0,p=3,w=11)
   }
@@ -130,13 +112,33 @@ predict_spectrolyzer=function(
 
 
 
-############################################################
-# laod and process ####
+########################################################################################################### #
+# load and process ####
 
-#reload
+
+## load spc from raw data ####
+# takes a while, if no changes, use serialized rds data (loaded below)
+if(F){ 
+  all_mine_spc=Spectro_batch_load(parent_dir = paste0(data_dir,"/field_data/data/ADDRESS/Spectrolyzer/Spectro_data/"),
+                                  
+                                  wavelengths = seq(200,750,2.5), #keep as is
+                                  parameters = c("DOCeq",
+                                                 "TOCeq",
+                                                 "Turbidity",
+                                                 "Temperature"
+                                  ),
+                                  zip = F,
+                                  read_param = T)
+  
+  
+  
+  saveRDS(all_mine_spc,paste0(data_dir,"/field_data/data/ADDRESS/Spectrolyzer/spectrolyzer_all_inclParam"))
+}
+
+## reload raw data ####
 all_mine_spc=readRDS(paste0(data_dir,"/field_data/data/ADDRESS/Spectrolyzer/spectrolyzer_all_inclParam"))
 
-# nesting spc for easier handling 
+## nesting spc for easier handling ####
 all_mine_prep=tibble(
   # non spc cols (not nested)
   all_mine_spc%>%select(Date_Time,Serial_No,DOCeq,Flags_DOCeq,TOCeq,Flags_TOCeq,
@@ -146,7 +148,7 @@ all_mine_prep=tibble(
                             Turbidity,Flags_Turbidity,Temperature,Flags_Temperature,identifier)))
 
 
-# checking data
+## checking and cleaning data ####
 # spc rows containing NAs
 which(is.na(all_mine_prep$spc)%>%rowSums()>0)
 # ...cols
@@ -158,17 +160,37 @@ which(is.na(all_mine_prep$spc)%>%colSums()>0)
 # rm rows with missing spc values
 all_mine=filter(all_mine_prep,rowSums(is.na(spc))==0)
 
+# using same cutoff as for Lambda. Converting to SPectrolyzer abs unit with scaling factor
+# aside from bad scans, there are multiple duplicated date_times... zip-folders duplicated?
+filter(all_mine,rowSums(spc<=0)==0&rowSums(spc>(4.5*X_scaling))==0)%>%filter(!duplicated(Date_Time))->all_mine_clean
 
+## save clean data ####
+saveRDS(all_mine_clean,paste0(data_dir,"/field_data/data/ADDRESS/Spectrolyzer/spectrolyzer_all_clean"))
 
-#load model evaluation statistics
+## reload clean data ####
+# if available, steps above may be skipped (but are not too slow, so not omitted with if(F){...})
+all_mine_clean=readRDS(paste0(data_dir,"/field_data/data/ADDRESS/Spectrolyzer/spectrolyzer_all_clean"))
+
+## load model evaluation statistics ####
+# set model dir. If no access to fak3/Hydropedo, this must link to local dir
 model_dir=paste0(data_dir,"/projects/ADDRESS/models/Cubist_2024-02-21/")
+
+# load model evaluation data (testset validation)
 eval=readRDS(paste0(model_dir,"Cubist_evaluation"))
-# note eval$plots are deprecated
+
+
+# save eval for Conrad as csv
+if(F){
+  write_excel_csv(eval$eval,paste0(data_dir,"projects/ADDRESS/models/Cubist_2024_02_21_eval.csv"))
+}
+
+
+# note eval$plots are deprecated and will not plot properly
 View(eval$eval)
 
-
-# example predictions 1
-
+# Predictions ####
+## example predictions 1 (manual) ####
+if(F){
 variable="Zn_mgL"
 best_mod_eval=filter(eval$eval,variable==variable)%>%filter(rmse==min(rmse))
 
@@ -179,54 +201,72 @@ Zn_pred=predict_spectrolyzer(all_mine$spc,variable=variable,
                      prefix = "cubist-auto"
                      )
 
-
-filter(all_mine,rowSums(spc<=0)==0&rowSums(spc>(4.5*X_scaling))==0)->all_mine_clean
-
-
-saveRDS(all_mine,paste0(data_dir,"/field_data/data/ADDRESS/Spectrolyzer/spectrolyzer_all_clean"))
+}
 
 
 
-# example 2
+## example 2 (loop for best models and save) ####
+
+#' loop fetches best model for each variable Y, predicts Yu and saves predictions with timestamp as csv,
+#' as well as a textfile with relevant metadata about the model params 
+for (var_name in unique(eval$eval$variable)){
+  
+  # find best model (test-eval)
+  best_mod_eval=filter(eval$eval,variable==var_name)%>%filter(rmse==min(rmse))
+  trans=best_mod_eval$trans
+  set=best_mod_eval$set
+  
+  # apply model / predict Yu
+  Y_pred=predict_spectrolyzer(
+    X=all_mine_clean$spc/X_scaling,
+    model_dir = model_dir,
+    variable = var_name,
+    #trans="none",
+    trans=trans,
+    #set="spc"
+    set=set
+  )
+  
+  # compile and save metadata (simple df, saved as txt)
+  meta=data.frame(Variable=var_name,
+              X_scaling=X_scaling,
+              Y_tranformation=trans,
+              X_transformation=set,
+              model_origin=model_dir,
+              notes="X_scaling used to convert from Lambda365 to Spectrolyzer absorbance cm-m and ln-log10. X_transformation=spc_preprocessing.")
+  write_delim(meta,paste0(data_dir,"projects/ADDRESS/model_out/",var_name,"_meta.txt"))
+  
+  # add timestamp to Yu pred. Save as csv
+  tibble(Date_Time=all_mine_clean$Date_Time,Y_pred)%>%write_excel_csv(paste0(data_dir,"projects/ADDRESS/model_out/",var_name,".csv"))
+}
 
 
-Y_scaling=1 # for better visibility in plot
-var_name="Zn_mgL"
-best_mod_eval=filter(eval$eval,variable==var_name)%>%filter(rmse==min(rmse))
-trans=best_mod_eval$trans
-set=best_mod_eval$set
-
-
-Y_pred=predict_spectrolyzer(
-  X=all_mine_clean$spc/X_scaling,
-  model_dir = model_dir,
-  variable = var_name,
-  #trans="none",
-  trans=trans,
-  #set="spc"
-  set=set
-)
+## reload all predictions from example 2 ####
+# init with all_mine_clean data
+all_pred=all_mine_clean
+# loop loads and appends predictions
+pb=progress::progressbar$new(total=length(list.files(paste0(data_dir,"projects/ADDRESS/model_out/"),pattern=".csv",full.names = T)))
+for (i in list.files(paste0(data_dir,"projects/ADDRESS/model_out/"),pattern=".csv",full.names = T)){
+  pred_i=read_csv(i,col_types = cols(Date_Time = col_datetime(format = "%Y/%m/%d %H:%M:%S")))
+  names(pred_i)=c("Date_Time",basename(i)%>%str_replace(".csv","_pred"))
+  pred_i$Date_Time=(pred_i$Date_Time%>%as.POSIXct())
+  #print(head(pred_i)) #debug
+  all_pred=left_join(all_pred,pred_i,by="Date_Time")
+  pb$tick()
+}
 
 
 
 
 
-out=all_mine_clean
-out[[paste0(var_name,"_pred")]]=Y_pred
 
-meta=data.frame(Variable=var_name,
-            X_scaling=X_scaling,
-            Y_tranformation=trans,
-            X_transformation=set,
-            model_origin=model_dir,
-            notes="X_scaling used to convert from Lambda365 to Spectrolyzer absorbance cm-m and ln-log10. X_transformation=spc_preprocessing.")
-write_delim(meta,paste0(data_dir,"projects/ADDRESS/model_out/","Zn_pred_meta.txt"))
 
-tibble(Date_Time=all_mine_clean$Date_Time,Y_pred)%>%write_excel_csv(paste0(data_dir,"projects/ADDRESS/model_out/","Zn_pred.csv"))
+
+
 
 
 ggplot(out,aes(x=Date_Time))+
-  geom_line(spc)
+  geom_line()+
   geom_point(aes(y=Zn_mgL_pred),col="red3")+
   theme_minimal()
 
@@ -251,13 +291,6 @@ ggplot(out,aes(x=Date_Time))+
 # tibble(set="lambda",id=spc_data_clean$date,spc_data_clean$spc)%>%
 #   pivot_longer(cols = names(spc_data_clean$spc))
 # )%>%ggplot(aes(x=as.numeric(name),y=value,col=set))+geom_line(linewidth=.1,alpha=.25)
-
-
-
-
-
-
-
 
 
 
