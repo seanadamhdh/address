@@ -4,14 +4,14 @@
 # Loading Packages, sourcing code, loading and pre-processing spectra and reference data ####
 {
   # depending on OS root is different. Please adjust here if necessary
-  
+  "//zfs1.hrz.tu-freiberg.de/fak3biogeochemie/03 Projects - Projekte/ADDRESS/ADDRESS"
   if(stringr::str_detect(osVersion,"Windows")){
     #workpc/win-sean
-    data_dir="//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/"
+    data_dir= "//zfs1.hrz.tu-freiberg.de/fak3biogeochemie/03 Projects - Projekte/ADDRESS/ADDRESS"
     code_dir="C:/Users/adam/Documents/GitLab/" #<- set user
   }else if(stringr::str_detect(osVersion,"Ubuntu")){
     #ubuntu                       
-    data_dir="/run/user/1000/gvfs/smb-share:server=zfs1.hrz.tu-freiberg.de,share=fak3ibf/Hydropedo/"
+    data_dir="/run/user/1000/gvfs/smb-share:server=zfs1.hrz.tu-freiberg.de,share=/fak3biogeochemie/03 Projects - Projekte/ADDRESS/ADDRESS" # not access
     code_dir="/home/hydropedo/Documents/GitLab/" #<- set user
   }else{# e.g. macos
     data_dir=""#...set
@@ -67,7 +67,7 @@
 #' 
 predict_spectrolyzer=function(
   X, 
-  model_dir="//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/projects/ADDRESS/models/Cubist_2024-02-21/",
+  model_dir="//zfs1.hrz.tu-freiberg.de/fak3biogeochemie/03 Projects - Projekte/ADDRESS/ADDRESS/models/Cubist_2024-02-21/",
   variable="Suva254",
   trans="log1p",
   set="spc",
@@ -119,7 +119,8 @@ predict_spectrolyzer=function(
 ## load spc from raw data ####
 # takes a while, if no changes, use serialized rds data (loaded below)
 if(F){ 
-  all_mine_spc=Spectro_batch_load(parent_dir = paste0(data_dir,"/field_data/data/ADDRESS/Spectrolyzer/Spectro_data/"),
+  # loading from Hydropedo zfs
+  all_mine_spc=Spectro_batch_load(parent_dir = paste0(data_dir,"/data/Spectrolyzer/Spectro_data/"),
                                   
                                   wavelengths = seq(200,750,2.5), #keep as is
                                   parameters = c("DOCeq",
@@ -132,11 +133,11 @@ if(F){
   
   
   
-  saveRDS(all_mine_spc,paste0(data_dir,"/field_data/data/ADDRESS/Spectrolyzer/spectrolyzer_all_inclParam"))
+  saveRDS(all_mine_spc,paste0(data_dir,"/data/Spectrolyzer/spectrolyzer_all_inclParam"))
 }
 
 ## reload raw data ####
-all_mine_spc=readRDS(paste0(data_dir,"/field_data/data/ADDRESS/Spectrolyzer/spectrolyzer_all_inclParam"))
+all_mine_spc=readRDS(paste0(data_dir,"/data/Spectrolyzer/spectrolyzer_all_inclParam"))
 
 ## nesting spc for easier handling ####
 all_mine_prep=tibble(
@@ -165,15 +166,15 @@ all_mine=filter(all_mine_prep,rowSums(is.na(spc))==0)
 filter(all_mine,rowSums(spc<=0)==0&rowSums(spc>(4.5*X_scaling))==0)%>%filter(!duplicated(Date_Time))->all_mine_clean
 
 ## save clean data ####
-saveRDS(all_mine_clean,paste0(data_dir,"/field_data/data/ADDRESS/Spectrolyzer/spectrolyzer_all_clean"))
+saveRDS(all_mine_clean,paste0(data_dir,"/data/Spectrolyzer/spectrolyzer_all_clean"))
 
 ## reload clean data ####
 # if available, steps above may be skipped (but are not too slow, so not omitted with if(F){...})
-all_mine_clean=readRDS(paste0(data_dir,"/field_data/data/ADDRESS/Spectrolyzer/spectrolyzer_all_clean"))
+all_mine_clean=readRDS(paste0(data_dir,"/data/Spectrolyzer/spectrolyzer_all_clean"))
 
 ## load model evaluation statistics ####
 # set model dir. If no access to fak3/Hydropedo, this must link to local dir
-model_dir=paste0(data_dir,"/projects/ADDRESS/models/Cubist_2024-02-21/")
+model_dir=paste0(data_dir,"/models/Cubist_2024-02-21/")
 
 # load model evaluation data (testset validation)
 eval=readRDS(paste0(model_dir,"Cubist_evaluation"))
@@ -181,7 +182,7 @@ eval=readRDS(paste0(model_dir,"Cubist_evaluation"))
 
 # save eval for Conrad as csv
 if(F){
-  write_excel_csv(eval$eval,paste0(data_dir,"projects/ADDRESS/models/Cubist_2024_02_21_eval.csv"))
+  write_excel_csv(eval$eval,paste0(data_dir,"/models/Cubist_2024_02_21_eval.csv"))
 }
 
 
@@ -234,10 +235,10 @@ for (var_name in unique(eval$eval$variable)){
               X_transformation=set,
               model_origin=model_dir,
               notes="X_scaling used to convert from Lambda365 to Spectrolyzer absorbance cm-m and ln-log10. X_transformation=spc_preprocessing.")
-  write_delim(meta,paste0(data_dir,"projects/ADDRESS/model_out/",var_name,"_meta.txt"))
+  write_delim(meta,paste0(data_dir,"/model_out/",var_name,"_meta.txt"))
   
   # add timestamp to Yu pred. Save as csv
-  tibble(Date_Time=all_mine_clean$Date_Time,Y_pred)%>%write_excel_csv(paste0(data_dir,"projects/ADDRESS/model_out/",var_name,".csv"))
+  tibble(Date_Time=all_mine_clean$Date_Time,Y_pred)%>%write_excel_csv(paste0(data_dir,"/model_out/",var_name,".csv"))
 }
 
 
@@ -245,8 +246,8 @@ for (var_name in unique(eval$eval$variable)){
 # init with all_mine_clean data
 all_pred=all_mine_clean
 # loop loads and appends predictions
-pb=progress::progress_bar$new(total=length(list.files(paste0(data_dir,"projects/ADDRESS/model_out/"),pattern=".csv",full.names = T)))
-for (i in list.files(paste0(data_dir,"projects/ADDRESS/model_out/"),pattern=".csv",full.names = T)){
+pb=progress::progress_bar$new(total=length(list.files(paste0(data_dir,"/model_out/"),pattern=".csv",full.names = T)))
+for (i in list.files(paste0(data_dir,"/model_out/"),pattern=".csv",full.names = T)){
   pred_i=read_csv(i,col_types = cols(Date_Time = col_datetime(format = "%Y/%m/%d %H:%M:%S")),progress = F)
   names(pred_i)=c("Date_Time",basename(i)%>%str_replace(".csv","_pred"))
   pred_i$Date_Time=(pred_i$Date_Time%>%as.POSIXct())
@@ -260,38 +261,48 @@ for (i in list.files(paste0(data_dir,"projects/ADDRESS/model_out/"),pattern=".cs
 # Plotting predicted concentrations ####
 # Daily averages to remove noise.
 # list of predicted variables
-var_list=list.files(paste0(data_dir,"projects/ADDRESS/model_out/"),pattern=".csv")%>%str_replace(".csv","_pred")
+var_list=list.files(paste0(data_dir,"/model_out/"),pattern=".csv")%>%str_replace(".csv","_pred")
+# for reference data
 var_list_obs=var_list%>%str_remove("_pred")
 
-autosampler_data=read_csv(paste0(data_dir,"/projects/ADDRESS/data/Autosampler_A12_clean.csv"))
+## load reference data
+autosampler_data=read_csv(paste0(data_dir,"/data/Autosampler_A12_clean.csv"))
 # note camp_date==date, redundant col?
-manual_data=read_excel(paste0(data_dir,"/projects/ADDRESS/data/Regularsampling_A12_clean.xlsx"))
+
+manual_data=read_excel(paste0(data_dir,"/data/Regularsampling_A12_clean.xlsx"))
+# date saved as string... converting
 manual_data$date=as.Date(manual_data$date)
 
-#interactive ggplotly-plot
-ggplotly(
+## plotting ####
 all_pred%>%
-  group_by(date=date(Date_Time))%>%
+  group_by(date=date(Date_Time))%>%select(all_of(c("date",var_list)))%>%
   summarise_all(.funs = ~mean(.,na.rm=T))%>%
-  #mutate_at(.vars = all_of(var_list),.funs = scale)%>%
+  #mutate_at(.vars = all_of(var_list),.funs = scale)%>% # scaling for comparing different variables
   pivot_longer(cols=all_of(var_list))%>%
-  ggplot(aes(x=date,y=value,col=str_remove(name,"_pred")))+
-  geom_line()+
+  ggplot()+
+  geom_line(aes(x=date,y=value,col=str_remove(name,"_pred")))+
   geom_point(
     data=autosampler_data%>%
       select(all_of(c("date","site_id",var_list_obs)))%>%
       pivot_longer(cols=var_list_obs),
-    aes(x=date,y=value,group=name),shape=3)+
+    aes(x=date,y=value,col=name,shape="A"))+
   geom_point(
     data=manual_data%>%
       select(all_of(c("date","site_id",var_list_obs[-7])))%>% # no Durchfluss
       pivot_longer(cols=var_list_obs[-7]),
-    aes(x=date,y=value,group=name),shape=13)+
+    aes(x=date,y=value,col=name,shape="M"))+
   theme_minimal()+
   ylab("Predicted value [mgL, muS/cm, l/s, abs-ratio,...]")+
   ggtitle("Timeseries of predicted variables")+
   scale_color_discrete("")+
-  theme(axis.title.x = element_blank())
+  scale_shape_manual("Reference data",breaks = c("A","M"),values=c(3,4),labels=c("Autosampler","Manual samples"))+
+  theme(axis.title.x = element_blank())->plt
+
+
+
+## interactive ggplotly-plot ####
+ggplotly(
+  plt
   )
 # Fe, Al are baaaad... possibly snv problem .. yup bug fixed
 
