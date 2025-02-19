@@ -94,7 +94,7 @@ predict_spectrolyzer=function(
     X=savitzkyGolay(X,m=0,p=3,w=11)
   }
   if(str_detect(set,"snv")){
-    standardNormalVariate(X)
+    X=standardNormalVariate(X)
   }
   
   if(trans=="none"){
@@ -245,9 +245,9 @@ for (var_name in unique(eval$eval$variable)){
 # init with all_mine_clean data
 all_pred=all_mine_clean
 # loop loads and appends predictions
-pb=progress::progressbar$new(total=length(list.files(paste0(data_dir,"projects/ADDRESS/model_out/"),pattern=".csv",full.names = T)))
+pb=progress::progress_bar$new(total=length(list.files(paste0(data_dir,"projects/ADDRESS/model_out/"),pattern=".csv",full.names = T)))
 for (i in list.files(paste0(data_dir,"projects/ADDRESS/model_out/"),pattern=".csv",full.names = T)){
-  pred_i=read_csv(i,col_types = cols(Date_Time = col_datetime(format = "%Y/%m/%d %H:%M:%S")))
+  pred_i=read_csv(i,col_types = cols(Date_Time = col_datetime(format = "%Y/%m/%d %H:%M:%S")),progress = F)
   names(pred_i)=c("Date_Time",basename(i)%>%str_replace(".csv","_pred"))
   pred_i$Date_Time=(pred_i$Date_Time%>%as.POSIXct())
   #print(head(pred_i)) #debug
@@ -257,19 +257,43 @@ for (i in list.files(paste0(data_dir,"projects/ADDRESS/model_out/"),pattern=".cs
 
 
 
+# Plotting predicted concentrations ####
+# Daily averages to remove noise.
+# list of predicted variables
+var_list=list.files(paste0(data_dir,"projects/ADDRESS/model_out/"),pattern=".csv")%>%str_replace(".csv","_pred")
+var_list_obs=var_list%>%str_remove("_pred")
 
+autosampler_data=read_csv(paste0(data_dir,"/projects/ADDRESS/data/Autosampler_A12_clean.csv"))
+# note camp_date==date, redundant col?
+manual_data=read_excel(paste0(data_dir,"/projects/ADDRESS/data/Regularsampling_A12_clean.xlsx"))
+manual_data$date=as.Date(manual_data$date)
 
-
-
-
-
-
-
-ggplot(out,aes(x=Date_Time))+
+#interactive ggplotly-plot
+ggplotly(
+all_pred%>%
+  group_by(date=date(Date_Time))%>%
+  summarise_all(.funs = ~mean(.,na.rm=T))%>%
+  #mutate_at(.vars = all_of(var_list),.funs = scale)%>%
+  pivot_longer(cols=all_of(var_list))%>%
+  ggplot(aes(x=date,y=value,col=str_remove(name,"_pred")))+
   geom_line()+
-  geom_point(aes(y=Zn_mgL_pred),col="red3")+
-  theme_minimal()
-
+  geom_point(
+    data=autosampler_data%>%
+      select(all_of(c("date","site_id",var_list_obs)))%>%
+      pivot_longer(cols=var_list_obs),
+    aes(x=date,y=value,group=name),shape=3)+
+  geom_point(
+    data=manual_data%>%
+      select(all_of(c("date","site_id",var_list_obs[-7])))%>% # no Durchfluss
+      pivot_longer(cols=var_list_obs[-7]),
+    aes(x=date,y=value,group=name),shape=13)+
+  theme_minimal()+
+  ylab("Predicted value [mgL, muS/cm, l/s, abs-ratio,...]")+
+  ggtitle("Timeseries of predicted variables")+
+  scale_color_discrete("")+
+  theme(axis.title.x = element_blank())
+  )
+# Fe, Al are baaaad... possibly snv problem .. yup bug fixed
 
 # legacy code
 # ggplot(all_mine_clean,
