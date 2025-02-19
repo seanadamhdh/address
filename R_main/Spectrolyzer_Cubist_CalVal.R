@@ -313,6 +313,7 @@ Cubist_test_evaluation$eval$variable%>%unique
                        var_sel))+
         ylab(var_sel)+
         xlab("date")+
+        ylab("Cd (mg/L)")+
         scale_size_manual("Set",breaks=c("training","testing"),values=c(.5,2))+
         scale_shape_manual("Set",breaks=c("training","testing"),values=c(16,3))+
         scale_color_manual("Set",breaks=c("training","testing"),values=c("black","red3"))+
