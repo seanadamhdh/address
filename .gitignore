@@ -2,3 +2,11 @@
 .Rhistory
 .RData
 .Ruserdata
+.DS_Store
+./R_main/Rproj.user
+<<<<<<< HEAD
+./R_main/temp
+R_main.Rproj
+=======
+./R_main/temp
+./R_main/R_main.Rproj

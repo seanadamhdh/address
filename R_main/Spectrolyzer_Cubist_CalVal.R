@@ -2,16 +2,27 @@
 
 
 
-########################################################################################################################################################
+####################################################################################################################################################### #
 # Loading Packages, sourcing code, loading and pre-processing spectra and reference data ####
-{# depending on OS root is different. Please adjust here
-  #root_dir<-"C:/Users/anitasanchez/Documents" # WINDOWS
-  root_dir<-"~/Documents"              # UBUNTU
+{
+  # depending on OS root is different. Please adjust here if necessary
   
+  if(stringr::str_detect(osVersion,"Windows")){
+    #workpc/win-sean
+    data_dir="//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/"
+    code_dir="C:/Users/adam/Documentss/GitLab/" #<- set user
+  }else if(stringr::str_detect(osVersion,"Ubuntu")){
+    #ubuntu                       
+    data_dir="/run/user/1000/gvfs/smb-share:server=zfs1.hrz.tu-freiberg.de,share=fak3ibf/Hydropedo/"
+    code_dir="/home/hydropedo/Documents/GitLab/" #<- set user
+  }else{# e.g. macos
+    data_dir=""#...set
+    code_dir=""#...set
+  }
   
   # sourcing some scripts from R_main
-  source(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/packages.R"))
-  source(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/evaluate_model_adjusted.R"))
+  source(paste0(code_dir,"/address/R_main/packages.R"))
+  source(paste0(code_dir,"/address/R_main/evaluate_model_adjusted.R"))
   
   #simple function for plotting
   plot_spc<-function(spc){
@@ -24,18 +35,21 @@
             xlab="wavelength [nm]",
             ylab="absorbance [freedom /sq inch]") #look unit up
   }
+}  
   
   
+  ###
   # load datasets ####
   
-  # load spc
-  spc_data_raw <- read_excel(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/data/processed/allspecoriginal_Oct2023.xlsx"))
+  ## load spc ####
+  spc_data_raw <- read_excel(paste0(data_dir,"/projects/ADDRESS/data/processed/allspecoriginal_Oct2023.xlsx"))
   spc_data<-tibble(spc_data_raw[1],spc=spc_data_raw[-1])
   
-  # plot raw spc
+  ### plot raw spc ####
   plot_spc(spc_data$spc)
   
-  # rm very off spc (outliers, bad scans in aggregates, etc.)
+  ### remove bad scans and plot again ####
+  # rm very off spc (outliers, bad scans in aggregates, etc.) 
   filter(spc_data,rowSums(spc<=0)==0&rowSums(spc>4.5)==0)->spc_data_clean
   plot_spc(spc_data_clean$spc)
   
@@ -46,11 +60,12 @@
     "\nremaining spectra:\t",nrow(spc_data_clean)
   )
   
-  ##################################
+  ################################## #
   # IMPLEMENTED SOME PREPROCESSING #
-  ##################################
+  ################################## #
   
-  # smoothing
+
+  ### smoothing ####
   spc_data_clean$spc_sg11<-
     savitzkyGolay(spc_data_clean$spc,
                   p=3,
@@ -58,13 +73,13 @@
                   w=11)
   plot_spc(spc_data_clean$spc_sg11)
   
-  # SNV
+  ### SNV ####
   spc_data_clean$spc_sg11_snv<-standardNormalVariate(spc_data_clean$spc_sg11)
   plot_spc(spc_data_clean$spc_sg11_snv)
   
   
-  # load manual samples
-  Regular <- read_excel(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/data/Regularsampling_A12_clean.xlsx"))
+  ## load manual samples ####
+  Regular <- read_excel(paste0(data_dir,"/projects/ADDRESS/data/Regularsampling_A12_clean.xlsx"))
   Regular_TOP <- filter(Regular,!str_detect(Sample_ID,"BH1"))
   Regular_TOP_spc<-inner_join(Regular_TOP,spc_data_clean,by="date")
   
@@ -73,16 +88,16 @@
   
   
   
-  # load autosampler
-  Auto <- read_csv(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/data/Autosampler_A12_clean.csv"))[-1]
+  ## load autosampler ####
+  Auto <- read_csv(paste0(data_dir,"/projects/ADDRESS/data/Autosampler_A12_clean.csv"))[-1]
   Auto_spc<-inner_join(Auto,spc_data_clean,by="date")
 }
-########################################################################################################################################################
+####################################################################################################################################################### #
 
 
-##################################################################################################################
+################################################################################################################# #
 # Calibration with Auto Sets ####
-{
+if(F){ # safety... set T to run
   #select spc set manually (when loop inactive)
   # set<-"spc_sg11_snv"
   
@@ -161,12 +176,12 @@
     
   }
 }
-########################################################################################################################################################
+####################################################################################################################################################### #
 
-###########################################################################################################################################################
-#  evaluation for test sets ####
+########################################################################################################################################################## #
+#  Model evaluation using test sets ####
 # init
-{
+if(F){ #safety, set to T if you want to rerun this chunk
   plotlist<-list()
   cubist_model_eval_table<-c()
   
@@ -227,16 +242,23 @@
   # save results 
   saveRDS(Cubist_test_evaluation,paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control",model_folder,"/Cubist_evaluation"))
 }
+
   
-###########################################################################################################################################################
-#### displaying results ####  
+########################################################################################################################################################## #
+# displaying results ####  
 # Assuming root_dir and model_folder variables are defined and hold the desired path
+
+## re-loading results ####
+# ...originally created in chunk above
 Cubist_test_evaluation <- readRDS(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control",model_folder,"/Cubist_evaluation"))
 
 # check  change in case it is different from above
 # set folder name
 model_folder<-"/models/Cubist_2024-02-21"
-  # plot timeseries for variable:
+
+# available variables
+Cubist_test_evaluation$eval$variable%>%unique
+  ## plot timeseries for variable:___ ####
   var_sel<-"Cd_mgL"
   # best combination of spc-set and transformation is choosen based on lowest RMSEP (test-data)
   
@@ -249,165 +271,10 @@ model_folder<-"/models/Cubist_2024-02-21"
                        "-",
                        var_sel))
   
-
-  var_sel2<-"Zn_mgL"
-  # best combination of spc-set and transformation is choosen based on lowest RMSEP (test-data)
-  
-  var_mods2<-filter(Cubist_test_evaluation$eval,variable==var_sel2)
-  best_mod2<-var_mods2[which.min(var_mods2$rmse),]
-  mod2<-read_rds(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control",model_folder,"/cubist-auto_",
-                       best_mod2$set,
-                       "-",
-                       best_mod2$trans,
-                       "-",
-                       var_sel2))
   
   
-
   
-Cd <- ggplotly(
-    {
-      if(best_mod$trans=="log1p"){
-        predictions<-data.frame(Auto_spc,
-                                pred=exp(predict(mod,Auto_spc[[best_mod$set]]))-1
-        )
-      } else {
-        predictions<-data.frame(Auto_spc,
-                                pred=predict(mod,Auto_spc[[best_mod$set]])
-        )
-      }
-      
-      # !!! there should not be NAs except in var_sel !!!
-      ref_data<-na.omit(select(Auto_spc,all_of(c("Sample_ID","campaign","site_id","date",var_sel))))
-      
-      ggplot(data=ref_data,aes(x=as.POSIXct(date),
-                               y=.data[[var_sel]]))+
-        geom_point(aes(size="training",
-                       shape="training",
-                       color="training"
-        ))+
-        geom_point(data=ref_data[-c(mod$partition),],
-                   aes(size="testing",
-                       shape="testing",
-                       color="testing"
-                   ),stroke=1)+
-        #  geom_line(linewidth=.2,alpha=.5)+
-        geom_line(data=predictions,aes(
-          x=date,
-          y=pred))+
-        ggtitle(paste0("cubist-auto_",
-                       best_mod$set,
-                       "-",
-                       best_mod$trans,
-                       "-",
-                       var_sel))+
-        ylab(var_sel)+
-        xlab("date")+
-        ylab("Cd (mg/L)")+
-        scale_size_manual("Set",breaks=c("training","testing"),values=c(.5,2))+
-        scale_shape_manual("Set",breaks=c("training","testing"),values=c(16,3))+
-        scale_color_manual("Set",breaks=c("training","testing"),values=c("black","red3"))+
-        theme_pubr()
-    }
-  )
-  
-
-Zn <- ggplotly(
-  {
-    if(best_mod2$trans=="log1p"){
-      predictions2<-data.frame(Auto_spc,
-                              pred=exp(predict(mod2,Auto_spc[[best_mod2$set]]))-1
-      )
-    } else {
-      predictions2<-data.frame(Auto_spc,
-                              pred=predict(mod2,Auto_spc[[best_mod2$set]])
-      )
-    }
-    
-    # !!! there should not be NAs except in var_sel !!!
-    ref_data2<-na.omit(select(Auto_spc,all_of(c("Sample_ID","campaign","site_id","date",var_sel2))))
-    
-    ggplot(data=ref_data2,aes(x=as.POSIXct(date),
-                             y=.data[[var_sel2]]))+
-      geom_point(aes(size="training",
-                     shape="training",
-                     color="training"
-      ))+
-      geom_point(data=ref_data2[-c(mod2$partition),],
-                 aes(size="testing",
-                     shape="testing",
-                     color="testing"
-                 ),stroke=1)+
-      #  geom_line(linewidth=.2,alpha=.5)+
-      geom_line(data=predictions2,aes(
-        x=date,
-        y=pred))+
-      ggtitle(paste0("cubist-auto_",
-                     best_mod2$set,
-                     "-",
-                     best_mod2$trans,
-                     "-",
-                     var_sel2))+
-      ylab(var_sel2)+
-      xlab("date")+
-      scale_size_manual("Set",breaks=c("training","testing"),values=c(.5,2))+
-      scale_shape_manual("Set",breaks=c("training","testing"),values=c(16,3))+
-      scale_color_manual("Set",breaks=c("training","testing"),values=c("black","red3"))+
-      theme_pubr()
-  }
-)
-
-new_predictions <- new_predictions %>% select(-spc_sg11_snv)
-write_csv(new_predictions, "new_predictions.csv")
-
-# Merge the predictions data frames and reference data frames for Cd and As
-# Ensure the predictions data frames include a 'date' column formatted as POSIXct
-predictions_Cd <- data.frame(date = as.POSIXct(predictions$date), Cd_pred = predictions$pred)
-predictions_As <- data.frame(date = as.POSIXct(predictions2$date), As_pred = predictions2$pred)
-merged_predictions <- merge(predictions_Cd, predictions_As, by = "date")
-
-# Merge the reference data frames for Cd and As
-ref_data_Cd <- ref_data %>% mutate(variable = "Cd")
-ref_data_As <- ref_data2 %>% mutate(variable = "As", As = .data[[var_sel2]])
-merged_ref_data <- bind_rows(ref_data_Cd, ref_data_As)
-
-# Create the combined plot
-combined_plot <- ggplot(merged_ref_data, aes(x = date)) +
-  geom_point(aes(y = As_mgL, color = "Training"), data = ref_data_As, size = 2.5, shape=20) + #training set
-  geom_point(aes(y = As_mgL, color = "Testing"), data = ref_data_As[-c(mod2$partition),], shape = 18, size = 3.0) + #testing set
-  geom_line(aes(y = As_pred, color = "As Prediction"), data = predictions_As, linewidth=1.5) + #As
-  geom_point(aes(y = Cd_mgL, color = "Training"), data = ref_data_Cd, size = 2.5, shape=20) + #training set 
-  geom_point(aes(y = Cd_mgL, color = "Testing"), data = ref_data_Cd[-c(mod$partition),], shape = 18, size = 3.0) + #testing set
-  geom_line(aes(y = Cd_pred, color = "Cd Prediction"), data = predictions_Cd, linewidth=1.5) + #Cd
-  ylim(0,30)+
-  scale_x_datetime(limits = as.POSIXct(c("2022-05-16", "2022-09-20"))) +
-  ylab("Concentration (mg/L)") +
-  xlab("Date") +
-  scale_color_manual(name = "Set", 
-                     values = c("Training" = "black", 
-                                "Testing" = "red3", 
-                                "As Prediction" = "blue", 
-                                "Cd Prediction" = "darkgreen")) +
-  theme_pubr() +
-  theme(legend.position = "bottom",
-      text = element_text(size = 18),  # Increase base text size
-      axis.title = element_text(size = 18),  # Increase axis title text size
-      axis.text = element_text(size = 18),  # Increase axis text size
-      legend.title = element_text(size = 18),  # Increase legend title size
-      legend.text = element_text(size = 18))  # Increase legend text size# Adjust legend position if needed
-
-
-# Convert the combined plot to an interactive plotly object
-ggplotly(combined_plot)
-
-ggplotly_object <- ggplotly(combined_plot)
-
-# Save the ggplotly object as an HTML file
-saveWidget(ggplotly_object, "~/Desktop/cubist_graphs/As_Cd_buildup.html")
-
-
-
-##modifing time frame   
+  ## main plot 1 - timeseries ####
   ggplotly(
     {
       if(best_mod$trans=="log1p"){
@@ -444,11 +311,57 @@ saveWidget(ggplotly_object, "~/Desktop/cubist_graphs/As_Cd_buildup.html")
                        best_mod$trans,
                        "-",
                        var_sel))+
-        geom_hline(yintercept= 0.02118, color="blue")+
-        geom_hline(yintercept= 0.0005, color="lightblue")+
         ylab(var_sel)+
         xlab("date")+
         ylab("Cd (mg/L)")+
+        scale_size_manual("Set",breaks=c("training","testing"),values=c(.5,2))+
+        scale_shape_manual("Set",breaks=c("training","testing"),values=c(16,3))+
+        scale_color_manual("Set",breaks=c("training","testing"),values=c("black","red3"))+
+        theme_pubr()
+    }
+  )
+  
+## main plot 2 - timeseries cropped ####
+  #modifing time frame   
+  ggplotly(
+    {
+      if(best_mod$trans=="log1p"){
+        predictions<-data.frame(Auto_spc,
+                                pred=exp(predict(mod,Auto_spc[[best_mod$set]]))-1
+        )
+      } else {
+        predictions<-data.frame(Auto_spc,
+                                pred=predict(mod,Auto_spc[[best_mod$set]])
+        )
+      }
+      
+      # !!! there should not be NAs except in var_sel !!!
+      ref_data<-na.omit(select(Auto_spc,all_of(c("Sample_ID","campaign","site_id","date",var_sel))))
+      
+      ggplot(data=ref_data,aes(x=as.POSIXct(date),
+                               y=.data[[var_sel]]))+
+        geom_point(aes(size="training",
+                       shape="training",
+                       color="training"
+        ))+
+        geom_point(data=ref_data[-c(mod$partition),],
+                   aes(size="testing",
+                       shape="testing",
+                       color="testing"
+                   ),stroke=1)+
+        #  geom_line(linewidth=.2,alpha=.5)+
+        geom_line(data=predictions,aes(
+          x=date,
+          y=pred))+
+        ggtitle(paste0("cubist-auto_",
+                       best_mod$set,
+                       "-",
+                       best_mod$trans,
+                       "-",
+                       var_sel))+
+        ylab(var_sel)+
+        xlab("date")+
+        ylab(var_sel)+
         scale_size_manual("Set",breaks=c("training","testing"),values=c(.5,2))+
         scale_shape_manual("Set",breaks=c("training","testing"),values=c(16,3))+
         scale_color_manual("Set",breaks=c("training","testing"),values=c("black","red3"))+
@@ -457,10 +370,8 @@ saveWidget(ggplotly_object, "~/Desktop/cubist_graphs/As_Cd_buildup.html")
     }
   )
   
-
-  
-  
-  ### spectral importance plots
+  ## main plot 3 - spectral importance ####
+  # spectral importance plots
   ggplotly({
     mod$trainingData%>%
       select(-c(`.outcome`))%>%
@@ -487,14 +398,19 @@ saveWidget(ggplotly_object, "~/Desktop/cubist_graphs/As_Cd_buildup.html")
                      "-",
                      var_sel))+
       theme_pubr()+
-      scale_y_continuous(sec.axis = sec_axis("Usage",trans = ~.*25))
+      scale_y_continuous(sec.axis = sec_axis("Usage",transform = ~.*25))
   })
 
-########################################################################################################################################################
+####################################################################################################################################################### #
 
-#looking at raw model testing vs predictions
-plot(mod$testingData$var_sel,predict(mod,mod$testingData$spc))
+## plot 4 - raw model testing obs vs predictions ####
+plot(mod$testingData[[var_sel]],predict(mod,mod$testingData[[best_mod$set]]))
  abline(0,1)
+
+
+
+
+
 
 
 
