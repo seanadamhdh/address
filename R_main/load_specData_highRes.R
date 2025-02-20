@@ -290,26 +290,51 @@ all_pred%>%
     data=autosampler_data%>%
       select(all_of(c("date","site_id",var_list_obs)))%>%
       pivot_longer(cols=var_list_obs),
-    aes(x=date,y=value,col=name,shape="A"))+
+    aes(x=date,y=value,col=name,shape="A",size="A"))+
   geom_point(
-    data=manual_data%>%
-      select(all_of(c("date","site_id",var_list_obs[-7])))%>% # no Durchfluss
+    data=manual_data%>%filter(substr(site_id,4,4)=="B")%>%
+      select(all_of(c("date",var_list_obs[-7])))%>% # no Durchfluss
       pivot_longer(cols=var_list_obs[-7]),
-    aes(x=date,y=value,col=name,shape="M"))+
+    aes(x=date,y=value,col=name,shape="MB",size="MB"))+
+  geom_point(
+    data=manual_data%>%filter(substr(site_id,4,4)=="T")%>%
+      select(all_of(c("date",var_list_obs[-7])))%>% # no Durchfluss
+      pivot_longer(cols=var_list_obs[-7]),
+    aes(x=date,y=value,col=name,shape="MT",size="MT"))+
   theme_minimal()+
   ylab("Predicted value [mgL, muS/cm, l/s, abs-ratio,...]")+
   ggtitle("Timeseries of predicted variables")+
-  scale_color_discrete("")+
-  scale_shape_manual("Reference data",breaks = c("A","M"),values=c(3,4),labels=c("Autosampler","Manual samples"))+
+  scale_color_discrete("Predictions\n(Line)\nDaily avg.")+
+  scale_shape_manual("Reference data",breaks = c("A","MB","MT"),values=c(3,6,2),labels=c("Autosampler","Manual Top","Manual Bottom"))+
+  scale_size_manual("Reference data",breaks = c("A","MB","MT"),values=c(1,.5,.5),labels=c("Autosampler","Manual Top","Manual Bottom"))+
+  scale_x_date(date_breaks = "3 months",date_labels = "%b%y")+
   theme(axis.title.x = element_blank())->plt
 
+## non-interactive ####
+plt+facet_wrap(~str_remove(name,"_pred"),scales="free_y")
+
+# save plt (non-interactive)
+  ggsave(
+    plot=(plt+facet_wrap(~str_remove(name,"_pred"),scales="free_y")),
+    path=paste0(data_dir,"/model_out/"),filename="all_predicted_timeseries.pdf",device = "pdf",width = 15*sqrt(2), height = 15)
 
 
-## interactive ggplotly-plot ####
-ggplotly(
-  plt
+
+
+  ## interactive ggplotly-plot ####
+  ggplotly(
+    plt
   )
-# Fe, Al are baaaad... possibly snv problem .. yup bug fixed
+  
+
+
+
+
+
+
+
+
+
 
 # legacy code
 # ggplot(all_mine_clean,
