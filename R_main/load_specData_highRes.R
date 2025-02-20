@@ -210,12 +210,12 @@ Zn_pred=predict_spectrolyzer(all_mine$spc,variable=variable,
 #' as well as a textfile with relevant metadata about the model params 
 for (var_name in unique(eval$eval$variable)){
   
-  # find best model (test-eval)
+  ### find best model (test-eval) ####
   best_mod_eval=filter(eval$eval,variable==var_name)%>%filter(rmse==min(rmse))
   trans=best_mod_eval$trans
   set=best_mod_eval$set
   
-  # apply model / predict Yu
+  ### apply model / predict Yu ####
   Y_pred=predict_spectrolyzer(
     X=all_mine_clean$spc/X_scaling,
     model_dir = model_dir,
@@ -226,17 +226,23 @@ for (var_name in unique(eval$eval$variable)){
     set=set
   )
   
-  # compile and save metadata (simple df, saved as txt)
+  ### add timestamp to Yu pred. Save as csv ####
+  tibble(Date_Time=all_mine_clean$Date_Time,Y_pred)%>%write_excel_csv(paste0(data_dir,"/model_out/",var_name,".csv"))
+  
+  
+  ### compile and save metadata (simple df, saved as txt) ####
   meta=data.frame(Variable=var_name,
               X_scaling=X_scaling,
               Y_tranformation=trans,
               X_transformation=set,
               model_origin=model_dir,
-              notes="X_scaling used to convert from Lambda365 to Spectrolyzer absorbance cm-m and ln-log10. X_transformation=spc_preprocessing.")
+              notes=
+              paste("X_scaling used to convert from Lambda365 to Spectrolyzer absorbance cm-m and ln-log10. X_transformation=spc_preprocessing.",
+              "The following columns are the evaluation metrics for the testset fetched from 'model_dir'/Cubist_evaluation"),
+              best_mod_eval # this should append all the test evaluation metrics
+              )
   write_delim(meta,paste0(data_dir,"/model_out/",var_name,"_meta.txt"))
   
-  # add timestamp to Yu pred. Save as csv
-  tibble(Date_Time=all_mine_clean$Date_Time,Y_pred)%>%write_excel_csv(paste0(data_dir,"/model_out/",var_name,".csv"))
 }
 
 
