@@ -82,3 +82,5 @@ Chemometric models were calibrated using the Cubist package @kuhn2023 in the car
 ![](images/log1p_spc_DOC.svg)
 
 Full evaluation summary: "//zfs1.hrz.tu-freiberg.de/fak3biogeochemie/03 Projects - Projekte/ADDRESS/ADDRESS/models/Cubist_2024_02_21_eval.csv"
+
+# Literature
