@@ -10,12 +10,12 @@
   
   if(stringr::str_detect(osVersion,"Windows")){
     #workpc/win-sean
-    data_dir="//zfs1.hrz.tu-freiberg.de/fak3ibf/Hydropedo/"
-    code_dir="C:/Users/adam/Documentss/GitLab/" #<- set user
+    data_dir="//zfs1.hrz.tu-freiberg.de/fak3biogeochemie/03 Projects - Projekte/ADDRESS/ADDRESS/"
+    code_dir="C:/Users/adam/Documents/GitHub/" #<- set user
   }else if(stringr::str_detect(osVersion,"Ubuntu")){
     #ubuntu                       
-    data_dir="/run/user/1000/gvfs/smb-share:server=zfs1.hrz.tu-freiberg.de,share=fak3ibf/Hydropedo/"
-    code_dir="/home/hydropedo/Documents/GitLab/" #<- set user
+    data_dir="/run/user/1000/gvfs/smb-share:server=zfs1.hrz.tu-freiberg.de,share=fak3biogeochemie/03 Projects - Projekte/ADDRESS/ADDRESS/"
+    code_dir="/home/hydropedo/Documents/GitHub/" #<- set user
   }else{# e.g. macos
     data_dir=""#...set
     code_dir=""#...set
@@ -43,7 +43,7 @@
   # load datasets ####
   
   ## load spc ####
-  spc_data_raw <- read_excel(paste0(data_dir,"/projects/ADDRESS/data/processed/allspecoriginal_Oct2023.xlsx"))
+  spc_data_raw <- read_excel(paste0(data_dir,"/data/processed/allspecoriginal_Oct2023.xlsx"))
   spc_data<-tibble(spc_data_raw[1],spc=spc_data_raw[-1])
   
   ### plot raw spc ####
@@ -80,7 +80,7 @@
   
   
   ## load manual samples ####
-  Regular <- read_excel(paste0(data_dir,"/projects/ADDRESS/data/Regularsampling_A12_clean.xlsx"))
+  Regular <- read_excel(paste0(data_dir,"/data/Regularsampling_A12_clean.xlsx"))
   Regular_TOP <- filter(Regular,!str_detect(Sample_ID,"BH1"))
   Regular_TOP_spc<-inner_join(Regular_TOP,spc_data_clean,by="date")
   
@@ -90,7 +90,7 @@
   
   
   ## load autosampler ####
-  Auto <- read_csv(paste0(data_dir,"/projects/ADDRESS/data/Autosampler_A12_clean.csv"))[-1]
+  Auto <- read_csv(paste0(data_dir,"/data/Autosampler_A12_clean.csv"))[-1]
   Auto_spc<-inner_join(Auto,spc_data_clean,by="date")
 }
 ####################################################################################################################################################### #
@@ -98,7 +98,7 @@
 
 ################################################################################################################# #
 # Calibration with Auto Sets ####
-if(F){ # safety... set T to run
+if(F){ # safety... set T to run !!! Legacy paths do not match
   #select spc set manually (when loop inactive)
   # set<-"spc_sg11_snv"
   
@@ -168,6 +168,7 @@ if(F){ # safety... set T to run
         )
         
         # saving output to /R_main/temp/ as rds. Named cubist-auto_#spc_set#-#trans#-#variable#
+        ############ LEGACY DO NOT RUN   ############ #
         saveRDS(out,paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control/R_main/temp/cubist-auto_",set,"-",trans,"-",i))
         cat("\n\n finished ",set,"-",trans,"-",i,"\n\n")
         print(out$documentation$test_eval_finalModel)
