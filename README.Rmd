@@ -47,11 +47,11 @@ Please do not directly upload to /main. Generally stable additions and clean dat
 -   R_main\
     Contails all scripts. Clean / working scripts stored directly. This is the only folder that is pushed to github.
 
-    -   temp\
-        Working output directory. Plots, model outputs etc. should be saved here initially.
+    -   temp \
+        Working output directory. Plots, model outputs etc. should be saved here initially. This folder is .gitignore and will therefore only exist locally.
 
-    -   other folders\
-        For saving / dumping uncleaned scripts.
+    -   old imported scripts\
+        For saving / dumping uncleaned scripts that were not directly used for data processing but are still related.
 
 --- Moved to f./fak3/biogeochemie/projects/ADDRESS/
 
@@ -82,5 +82,9 @@ Chemometric models were calibrated using the Cubist package @kuhn2023 in the car
 ![](images/log1p_spc_DOC.svg)
 
 Full evaluation summary: "//zfs1.hrz.tu-freiberg.de/fak3biogeochemie/03 Projects - Projekte/ADDRESS/ADDRESS/models/Cubist_2024_02_21_eval.csv"
+
+## Using the models
+
+In the repository, ./R_main/load_specData_highRes.R contains a function `predict_spectrolyzer()` for loading the collected spectrolyzer data and applying the calibrated models.
 
 # Literature

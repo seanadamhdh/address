@@ -1,4 +1,21 @@
 
+# INFO ####
+#' Load spectrolyzer data and calculate predictions with claibrated models.
+#' Note: If script is sourced completely, all relevant chunks for preparing the workspace are run.
+#' Some parts of the script are wrapped in if(F){...} to protect against accidental execution.
+#' Run those chunks manually by temporarily setting if(T){...}, or sourcing manually cmd+enter.
+#' 
+#' This script requires the scripts 
+#' packages.R (loads a series of needed or useful packages and some smaller helper functions)
+#' Spectrolyzer_load_good.R (if spectrolyzer data is reloaded)
+#' evaluate_model_adjusted.R (Based on simplerspec::evaluate_model, with some added evalutaion metrics)
+#' Those scripts should be located in `code_dir`/R_main/...
+#' 
+#' `code_dir` and `data_dir`
+#' Paths to local Github / project folder and data folder (this is currently in .../fak3biogeochemie/03 Projects - Projekte/ADDRESS/ADDRESS")
+#' Note that paths can vary depending on OS.
+#' Set paths accordingly below.
+#' 
 
 ####################################################################################################################################################### #
 # Loading Packages, sourcing code, loading and pre-processing spectra and reference data ####
@@ -8,11 +25,11 @@
   if(stringr::str_detect(osVersion,"Windows")){
     #workpc/win-sean
     data_dir= "//zfs1.hrz.tu-freiberg.de/fak3biogeochemie/03 Projects - Projekte/ADDRESS/ADDRESS"
-    code_dir="C:/Users/adam/Documents/GitLab/" #<- set user
+    code_dir="C:/Users/adam/Documents/GitHub/" #<- set user
   }else if(stringr::str_detect(osVersion,"Ubuntu")){
     #ubuntu                       
     data_dir="/run/user/1000/gvfs/smb-share:server=zfs1.hrz.tu-freiberg.de,share=/fak3biogeochemie/03 Projects - Projekte/ADDRESS/ADDRESS" # not access
-    code_dir="/home/hydropedo/Documents/GitLab/" #<- set user
+    code_dir="/home/hydropedo/Documents/GitHub/" #<- set user
   }else{# e.g. macos
     data_dir=""#...set
     code_dir=""#...set
@@ -118,7 +135,7 @@ predict_spectrolyzer=function(
 ## load spc from raw data ####
 # takes a while, if no changes, use serialized rds data (loaded below)
 if(F){ 
-  # loading from Hydropedo zfs
+  # loading from zfs
   all_mine_spc=Spectro_batch_load(parent_dir = paste0(data_dir,"/data/Spectrolyzer/Spectro_data/"),
                                   
                                   wavelengths = seq(200,750,2.5), #keep as is
@@ -135,10 +152,13 @@ if(F){
   saveRDS(all_mine_spc,paste0(data_dir,"/data/Spectrolyzer/spectrolyzer_all_inclParam"))
 }
 
-## reload raw data ####
+
+# Run only for re-processing spectra. Otherwise final dataset can simply be reloaded
+if(F){
+### reload raw data ####
 all_mine_spc=readRDS(paste0(data_dir,"/data/Spectrolyzer/spectrolyzer_all_inclParam"))
 
-## nesting spc for easier handling ####
+### nesting spc for easier handling ####
 all_mine_prep=tibble(
   # non spc cols (not nested)
   all_mine_spc%>%select(Date_Time,Serial_No,DOCeq,Flags_DOCeq,TOCeq,Flags_TOCeq,
@@ -148,7 +168,7 @@ all_mine_prep=tibble(
                             Turbidity,Flags_Turbidity,Temperature,Flags_Temperature,identifier)))
 
 
-## checking and cleaning data ####
+### checking and cleaning data ####
 # spc rows containing NAs
 which(is.na(all_mine_prep$spc)%>%rowSums()>0)
 # ...cols
@@ -164,8 +184,11 @@ all_mine=filter(all_mine_prep,rowSums(is.na(spc))==0)
 # aside from bad scans, there are multiple duplicated date_times... zip-folders duplicated?
 filter(all_mine,rowSums(spc<=0)==0&rowSums(spc>(4.5*X_scaling))==0)%>%filter(!duplicated(Date_Time))->all_mine_clean
 
-## save clean data ####
+### save clean data ####
 saveRDS(all_mine_clean,paste0(data_dir,"/data/Spectrolyzer/spectrolyzer_all_clean"))
+}
+
+
 
 ## reload clean data ####
 # if available, steps above may be skipped (but are not too slow, so not omitted with if(F){...})
@@ -194,7 +217,7 @@ if(F){
 variable="Zn_mgL"
 best_mod_eval=filter(eval$eval,variable==variable)%>%filter(rmse==min(rmse))
 
-Zn_pred=predict_spectrolyzer(all_mine$spc,variable=variable,
+Zn_pred=predict_spectrolyzer(all_mine_clean$spc,variable=variable,
                      trans=best_mod_eval$trans,
                      set = best_mod_eval$set,
                      model_dir = model_dir,
@@ -202,8 +225,8 @@ Zn_pred=predict_spectrolyzer(all_mine$spc,variable=variable,
                      )
 }
 
-
-
+# safety (if entire script is sourced accidently)
+if(F){
 ## example 2 (loop for best models and save) ####
 
 #' loop fetches best model for each variable Y, predicts Yu and saves predictions with timestamp as csv,
@@ -270,7 +293,7 @@ var_list=list.files(paste0(data_dir,"/model_out/"),pattern=".csv")%>%str_replace
 var_list_obs=var_list%>%str_remove("_pred")
 
 
-## load reference data
+## load reference data ####
 autosampler_data=read_csv(paste0(data_dir,"/data/Autosampler_A12_clean.csv"))
 # note camp_date==date, redundant col?
 
@@ -361,7 +384,7 @@ plt+facet_wrap(~str_remove(name,"_pred"),scales="free_y")
 
 
 
-
+}
 
 
 

@@ -1,11 +1,12 @@
-#' Note for SOSA project
-#' Serial No. of Spectrolyzer in json-Metafiles:
-#' MF1: 22130201
-#' MF2: 22130200
 
-# lazy loading of packages (make sure package_load.R is in wd)
-source("./R_main/packages.R")
-#--------------------------------------------------------------------------------------------------------------------------------------------
+
+# INFO ####
+#' Functions for loading raw spectrolyzer data
+#'
+
+# lazy loading of packages (make sure package.R is in wd)
+#source("./R_main/packages.R")
+#------------------------------------------------------------------------------------------------------------------------------------------- -
 #' @title generalised fingerprint load-in
 #' @description
 #' NOTE: Removes flagged spectra.
@@ -53,7 +54,7 @@ Spectro_load_fingerprint<-function(directory,
   }
   return(temp)
 }
-#--------------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------------------------------------- -
 #' generalised parameter load-in
 #' @param directory filepath of parameter folder
 #' @param parameters list of recorded parameters, forming col-names (Default is Temperature only). Must match order in csv. 
@@ -84,7 +85,7 @@ Spectro_load_parameter<-function(directory,
   return(temp)
 }
 
-#### LEGACY CODE #### 
+#### LEGACY CODE
 #' used to remove flagged parameter values... Sosa spectrolyzer only recorded Temperature... easy. Mine spectrolyzer has multiple columns with individual flags.
 #' Rewrote code above to give unique flag names. No flag columns are handed on to batch load. Easy solution and makes sense to keep flags for future filtering instead of 
 #' dumping all rows with any flags.
@@ -107,7 +108,11 @@ Spectro_load_parameter<-function(directory,
   #' }
   #' return(temp)
   #'}
-#--------------------------------------------------------------------------------------------------------------------------------------------
+  #'
+
+
+
+#------------------------------------------------------------------------------------------------------------------------------------------- -
 #' merging of fingerprint and parameter files
 #' @param fingerprint fingerprint tibble, created by Spectro_load_fingerprints
 #' @param parameters fingerprint tibble, created by Spectro_load_parameters
@@ -127,7 +132,7 @@ Spectro_merge_col<-function(fingerprint,parameter){
   }
   return(temp)
 }
-#--------------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------------------------------------- -
 #' local unzip function (optional new parent folder)
 #' @param zip_directory zip-folder that is to be extracted
 #' @param new Default is NULL. Input creates new parent directory for the extracte file,
@@ -150,14 +155,14 @@ unzip_local<-function(zip_directory,new_dir=NULL){
 
 
 
-###########
+######### #
 #         #
 #  works  #
 #         #
-###########
+######### #
 #' dir:   "C:/Users/SeanA/OneDrive/Sosa/Spectrolyzer/"
 #'        "C:/Users/SeanA/OneDrive/Sosa/Spectro_new_04_10_22/"
-#--------------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------------------------------------- -
 #' enables load-in of multipe scpectrolyzer-zip-files or already un-zipped files to coherent tibble
 #' @param parent_dir path of folder containing the zip- or un-zipped files
 #' @param wavelengths col-names of measured wavelengths. default is 200-750 in 2.5 m, steps
