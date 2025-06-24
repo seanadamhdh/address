@@ -1,6 +1,26 @@
 
 
-
+# INFO ####
+#' Script use for calibration of Cubist chemometric models for the prediction
+#'  of water properties (i.e., elemental, DOC conentrations) from 
+#'  Spectrolyzer data. Note that the paths referred to in the actual 
+#'  model calibration 
+#'
+#' Note: If script is sourced completely, all relevant chunks for preparing the workspace are run.
+#' Some parts of the script are wrapped in if(F){...} to protect against accidental execution.
+#' Run those chunks manually by temporarily setting if(T){...}, or sourcing manually cmd+enter.
+#' 
+#'
+#' This script requires the scripts 
+#' packages.R (loads a series of needed or useful packages and some smaller helper functions)
+#' evaluate_model_adjusted.R (Based on simplerspec::evaluate_model, with some added evalutaion metrics)
+#' Those scripts should be located in `code_dir`/R_main/...
+#' 
+#' `code_dir` and `data_dir`
+#' Paths to local Github / project folder and data folder (this is currently in .../fak3biogeochemie/03 Projects - Projekte/ADDRESS/ADDRESS")
+#' Note that paths can vary depending on OS.
+#' Set paths accordingly below.
+#'  
 
 ####################################################################################################################################################### #
 # Loading Packages, sourcing code, loading and pre-processing spectra and reference data ####
@@ -39,7 +59,7 @@
 }  
   
   
-  ###
+  ######################################################################################################################################################## #
   # load datasets ####
   
   ## load spc ####
@@ -92,8 +112,6 @@
   ## load autosampler ####
   Auto <- read_csv(paste0(data_dir,"/data/Autosampler_A12_clean.csv"))[-1]
   Auto_spc<-inner_join(Auto,spc_data_clean,by="date")
-}
-####################################################################################################################################################### #
 
 
 ################################################################################################################# #
@@ -190,8 +208,10 @@ if(F){ #safety, set to T if you want to rerun this chunk
   # set folder name
   model_folder<-"/models/Cubist_2024-02-21"
   
+  # temp folder (.gitignore)
+  if(!(paste0(code_dir,"/address/R_main/temp/")%>%dir.exists())){dir.create(paste0(code_dir,"/address/R_main/temp/"))}
   # loop for all models in dir
-  for (i in list.files(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control",model_folder),full.names = T,
+  for (i in list.files(paste0(code_dir,"/GitHub/address/R_main/temp/",model_folder),full.names = T,
                        pattern = "cubist") # small "c" cubist is used as pattern for model class objects in /temp -> results etc should be named Cubist with capital "C"
   ){
     model<-read_rds(i)
@@ -242,7 +262,10 @@ if(F){ #safety, set to T if you want to rerun this chunk
   list(eval=cubist_model_eval_table,plots=plotlist)->Cubist_test_evaluation
   
   # save results 
-  saveRDS(Cubist_test_evaluation,paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control",model_folder,"/Cubist_evaluation"))
+  saveRDS(Cubist_test_evaluation,paste0(paste0(code_dir,
+                                               "/GitHub/address/R_main/temp/",
+                                               model_folder,
+                                               "/Cubist_evaluation"))
 }
 
   
@@ -252,7 +275,8 @@ if(F){ #safety, set to T if you want to rerun this chunk
 
 ## re-loading results ####
 # ...originally created in chunk above
-Cubist_test_evaluation <- readRDS(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control",model_folder,"/Cubist_evaluation"))
+Cubist_test_evaluation <- readRDS(paste0(code_dir,"/GitHub/address/R_main/temp/",
+                                         model_folder,"/Cubist_evaluation"))
 
 # check  change in case it is different from above
 # set folder name
@@ -266,7 +290,7 @@ Cubist_test_evaluation$eval$variable%>%unique
   
   var_mods<-filter(Cubist_test_evaluation$eval,variable==var_sel)
   best_mod<-var_mods[which.min(var_mods$rmse),]
-  mod<-read_rds(paste0(root_dir,"/GitHub/ADDRESS-adit_drainage_solute_source_control",model_folder,"/cubist-auto_",
+  mod<-read_rds(paste0(code_dir,"/GitHub/address/R_main/temp/",model_folder,"/cubist-auto_",
                        best_mod$set,
                        "-",
                        best_mod$trans,

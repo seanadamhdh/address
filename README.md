@@ -1,7 +1,7 @@
 ADDRESS
 ================
 Anita Alexandra Sanchez, Sean Adam
-2025-06-18
+2025-06-24
 
 - [IMPORTANT MESSAGE (UPDATE)](#important-message-update)
 - [ADDRESS data exchange and online
@@ -10,6 +10,7 @@ Anita Alexandra Sanchez, Sean Adam
     GUIDELINES](#general-upload-rules--guidelines)
   - [Spectral processing and model
     calibration](#spectral-processing-and-model-calibration)
+  - [Using the models](#using-the-models)
 - [Literature](#literature)
 
 # IMPORTANT MESSAGE (UPDATE)
@@ -55,10 +56,12 @@ contamination of main repository. Folder structure:
 
   - temp  
     Working output directory. Plots, model outputs etc. should be saved
-    here initially.
+    here initially. This folder is .gitignore and will therefore only
+    exist locally.
 
-  - other folders  
-    For saving / dumping uncleaned scripts.
+  - old imported scripts  
+    For saving / dumping uncleaned scripts that were not directly used
+    for data processing but are still related.
 
 — Moved to f./fak3/biogeochemie/projects/ADDRESS/
 
@@ -116,6 +119,27 @@ DOC.
 
 Full evaluation summary: “//zfs1.hrz.tu-freiberg.de/fak3biogeochemie/03
 Projects - Projekte/ADDRESS/ADDRESS/models/Cubist_2024_02_21_eval.csv”
+
+## Using the models
+
+In the repository, ./R_main/load_specData_highRes.R contains a function
+`predict_spectrolyzer()` for loading the collected spectrolyzer data and
+applying the calibrated models. THe function returns a vector with
+predictions. Each entry corresponds to a row of the input X. Example
+use:
+
+``` r
+doc_mgL_pred=predict_spectrolyzer(X=spectrolyzer_data$spc_sg, 
+                    model_dir="//zfs1.hrz.tu-freiberg.de/fak3biogeochemie/03 Projects - Projekte/ADDRESS/ADDRESS/models/Cubist_2024-02-21/",
+                    variable="DOC_mgL", #select variable to predict
+                    trans="log1p", # select transformation (predictions are already transformed back)
+                    set="spc_sg", # must be the the same as set selcted as `X`
+                    prefix="cubist-auto"  # default for model run
+)
+
+# i.e., add to dataset
+spectrolyzer_data$DOC_predictions=doc_mgL_pred
+```
 
 # Literature
 
